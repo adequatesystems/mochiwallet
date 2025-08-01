@@ -1,0 +1,135 @@
+name: Build iOS App
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-ios:
+    # runs-on: self-hosted
+    runs-on: macos-latest
+    steps:
+      - name: Checkout ios branch code
+        uses: actions/checkout@v4
+        with:
+          ref: ios
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+          bundler-cache: true
+        
+      - name: Install CocoaPods
+        run: gem install cocoapods
+      
+      - name: Install Dependencies
+        run: pnpm install
+      
+      - name: Build Web App
+        run: pnpm run build:web
+      
+      - name: Setup Capacitor and iOS
+        run: |
+          npx cap add ios
+          npx cap sync ios
+
+      - name: Install iOS Dependencies
+        run: |
+          cd ios/App
+          pod install
+          cd ../..
+
+      - name: Get tag name
+        id: tag
+        run: echo "TAG_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
+      # Crea l'archivio dei file sorgente iOS per Xcode
+      - name: Create iOS Source Archive
+        run: |
+          cd ios
+          zip -r ../ios-source-${{ env.TAG_NAME }}.zip App/
+          cd ..
+
+      - name: Upload iOS Source Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-source-${{ env.TAG_NAME }}
+          path: ios-source-${{ env.TAG_NAME }}.zip
+          retention-days: 30
+
+      # Build per App Store (solo se hai i certificati configurati)
+      - name: Build iOS Release
+        if: env.BUILD_CERTIFICATE_BASE64 != ''
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.IOS_BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_P12_PASSWORD }}
+          BUILD_PROVISION_PROFILE_BASE64: ${{ secrets.IOS_PROVISION_PROFILE_BASE64 }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          # Configurazione certificati
+          CERTIFICATE_PATH=$RUNNER_TEMP/build_certificate.p12
+          PP_PATH=$RUNNER_TEMP/build_pp.mobileprovision
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          
+          # Import certificate and provisioning profile from secrets
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode > $CERTIFICATE_PATH
+          echo -n "$BUILD_PROVISION_PROFILE_BASE64" | base64 --decode > $PP_PATH
+          
+          # Create keychain and import certificate
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security import $CERTIFICATE_PATH -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+          
+          # Install provisioning profile
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
+          
+          # Build and archive
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release archive -archivePath $RUNNER_TEMP/MochimoWallet.xcarchive
+          
+          # Create ExportOptions.plist if it doesn't exist
+          cat > ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store</string>
+              <key>uploadBitcode</key>
+              <false/>
+              <key>uploadSymbols</key>
+              <true/>
+              <key>compileBitcode</key>
+              <false/>
+          </dict>
+          </plist>
+          EOF
+          
+          # Export IPA
+          xcodebuild -exportArchive -archivePath $RUNNER_TEMP/MochimoWallet.xcarchive -exportOptionsPlist ExportOptions.plist -exportPath $RUNNER_TEMP/export
+          # Ensure the IPA is named correctly for the release workflow
+          IPA_PATH=$(ls $RUNNER_TEMP/export/*.ipa | head -1)
+          mv "$IPA_PATH" "$RUNNER_TEMP/export/mochimo-ios-${{ env.TAG_NAME }}.ipa"
+
+      - name: Upload iOS IPA
+        if: env.BUILD_CERTIFICATE_BASE64 != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa-${{ env.TAG_NAME }}
+          path: ${{ runner.temp }}/export/mochimo-ios-${{ env.TAG_NAME }}.ipa
+          retention-days: 30

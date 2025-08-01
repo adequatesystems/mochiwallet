@@ -16,12 +16,14 @@ import { sessionManager } from "./lib/services/SessionManager"
 import Loading from "./components/wallet/Loading"
 import { log } from "@/lib/utils/logging"
 import { ImportJsonWallet } from '@/components/wallet/ImportJsonWallet'
+import { ApiEndpointProvider } from "@/lib/contexts/ApiEndpointContext"
+
 const logger = log.getLogger("wallet");
 // const apiUrl = 'http://46.250.241.212:8081'
 // const apiUrl2 = 'http://35.208.202.76:8080'
 type WalletView = 'welcome' | 'create' | 'unlock' | 'dashboard' | 'import' | 'import-json' | 'loading'
 
-const network = new MeshNetworkService(env.apiUrl)
+const network = new MeshNetworkService(env.apiUrl);
 NetworkProvider.setNetwork(network)
 
 
@@ -42,28 +44,27 @@ export function App() {
   const w = useWallet()
   useEffect(() => {
     const checkSession = async () => {
-      const session = await sessionManager.checkSession()
-      const hasWallet = await w.checkWallet()
+      let session = { active: false };
+      if (typeof window !== 'undefined' && window.chrome && window.chrome.runtime) {
+        session = await sessionManager.checkSession();
+      }
+      const hasWallet = await w.checkWallet();
       try {
-
-        if (session.active && session.jwk) {
+        if (session.active && (session as any).jwk) {
           // Use the encrypted password to unlock the wallet
-          await w.unlockWallet(session.jwk, 'jwk')
-          setView('dashboard')
+          await w.unlockWallet((session as any).jwk, 'jwk');
+          setView('dashboard');
         } else if (hasWallet) {
-          setView('unlock')
+          setView('unlock');
         } else {
-          setView('welcome')
+          setView('welcome');
         }
       } catch (error) {
-        logger.error('Session check failed:', error)
-        setView('welcome')
+        logger.error('Session check failed:', error);
+        setView('welcome');
       }
-
-      setLoading(false)
-    }
-
-    checkSession()
+    };
+    checkSession();
   }, [])
 
 
@@ -99,110 +100,118 @@ export function App() {
   }
 
 
-  switch (view) {
-    case 'welcome':
-      return (
-        <WalletLayout>
-          <div className="flex flex-col items-center justify-center h-full gap-4">
-            <motion.div
-              initial={{ scale: 0.5 }}
-              animate={{ scale: 1 }}
-              transition={{
-                type: "spring",
-                stiffness: 260,
-                damping: 20
-              }}
-              className="mb-8"
-            >
-              <Logo size="xl" animated className="text-primary" />
-            </motion.div>
-            <h2 className="text-2xl font-bold text-center mb-8">Welcome to Mochimo</h2>
-            <div className="flex flex-col w-full max-w-xs gap-4">
-              <Button
-                className="w-full"
-                size="lg"
-                onClick={() => setView('create')}
+  return (
+    <ApiEndpointProvider>
+      {renderView()}
+    </ApiEndpointProvider>
+  )
+
+  function renderView() {
+    switch (view) {
+      case 'welcome':
+        return (
+          <WalletLayout>
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <motion.div
+                initial={{ scale: 0.5 }}
+                animate={{ scale: 1 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 260,
+                  damping: 20
+                }}
+                className="mb-8"
               >
-                <PlusCircle className="mr-2" />
-                Create New Wallet
-              </Button>
-              <Button
-                className="w-full"
-                variant="outline"
-                size="lg"
-                onClick={() => setView('import')}
-              >
-                <Import className="mr-2" />
-                Import From Mnemonic Phrase
-              </Button>
-              <Button
-                className="w-full"
-                variant="outline"
-                size="lg"
-                onClick={() => setView('import-json')}
-              >
-                <FileJson className="mr-2" />
-                Import From Backup
-              </Button>
+                <Logo size="xl" animated className="text-primary" />
+              </motion.div>
+              <h2 className="text-2xl font-bold text-center mb-8">Welcome to Mochimo</h2>
+              <div className="flex flex-col w-full max-w-xs gap-4">
+                <Button
+                  className="w-full"
+                  size="lg"
+                  onClick={() => setView('create')}
+                >
+                  <PlusCircle className="mr-2" />
+                  Create New Wallet
+                </Button>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setView('import')}
+                >
+                  <Import className="mr-2" />
+                  Import From Mnemonic Phrase
+                </Button>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setView('import-json')}
+                >
+                  <FileJson className="mr-2" />
+                  Import From Backup
+                </Button>
+              </div>
             </div>
-          </div>
-        </WalletLayout>
-      )
+          </WalletLayout>
+        )
 
-    case 'create':
-      return (
-        <WalletLayout>
-          <CreateWallet onWalletCreated={handleWalletCreated} />
-        </WalletLayout>
-      )
+      case 'create':
+        return (
+          <WalletLayout>
+            <CreateWallet onWalletCreated={handleWalletCreated} />
+          </WalletLayout>
+        )
 
-    case 'unlock':
-      return (
-        <WalletLayout>
-          <UnlockWallet onUnlock={handleWalletUnlocked} />
-        </WalletLayout>
-      )
+      case 'unlock':
+        return (
+          <WalletLayout>
+            <UnlockWallet onUnlock={handleWalletUnlocked} />
+          </WalletLayout>
+        )
 
-    case 'dashboard':
-      return (
-        <WalletLayout
-          showMenu
-          sidebarOpen={sidebarOpen}
-          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-        >
-          <WalletDashboard
-            wallet={wallet}
+      case 'dashboard':
+        return (
+          <WalletLayout
+            showMenu
             sidebarOpen={sidebarOpen}
-            onSidebarOpenChange={setSidebarOpen}
-          />
-        </WalletLayout>
-      )
+            onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          >
+            <WalletDashboard
+              wallet={wallet}
+              sidebarOpen={sidebarOpen}
+              onSidebarOpenChange={setSidebarOpen}
+            />
+          </WalletLayout>
+        )
 
-    case 'import':
-      return (
-        <WalletLayout>
-          <ImportWallet
-            onWalletImported={handleWalletImported}
-            onBack={() => setView('welcome')}
-          />
-        </WalletLayout>
-      )
+      case 'import':
+        return (
+          <WalletLayout>
+            <ImportWallet
+              onWalletImported={handleWalletImported}
+              onBack={() => setView('welcome')}
+            />
+          </WalletLayout>
+        )
 
-    case 'import-json':
-      return (
-        <WalletLayout>
-          <ImportJsonWallet 
-            onWalletImported={handleWalletImported} 
-            onBack={() => setView('welcome')} 
-          />
-        </WalletLayout>
-      )
+      case 'import-json':
+        return (
+          <WalletLayout>
+            <ImportJsonWallet 
+              onWalletImported={handleWalletImported} 
+              onBack={() => setView('welcome')} 
+            />
+          </WalletLayout>
+        )
 
-    default:
-      return (
-        <WalletLayout>
-          <Loading />
-        </WalletLayout>
-      )
+      default:
+        return (
+          <WalletLayout>
+            <Loading />
+          </WalletLayout>
+        )
+    }
   }
 }

@@ -15,6 +15,7 @@ import {
 import { useEffect, useMemo, useState } from 'react'
 
 import { Account, MasterSeed, NetworkProvider, useAccounts, useNetwork, useWallet } from 'mochimo-wallet'
+import { env } from '@/config/env'
 
 import {
   Tooltip,
@@ -26,6 +27,7 @@ import { SendModal } from './SendModal'
 import {TagUtils} from "mochimo-wots"
 import { ReceiveDialog } from './ReceiveDialog'
 import { ManageAccountsDialog } from './ManageAccountsDialog'
+import { RecentActivity } from './RecentActivity'
 import { log } from "@/lib/utils/logging"
 const logger = log.getLogger("wallet");
 
@@ -34,13 +36,7 @@ interface AccountViewProps {
   onUpdate: (updated: Account) => void
 }
 
-// Temporary transaction type (we'll expand this later)
-interface Transaction {
-  type: 'send' | 'receive'
-  amount: string
-  timestamp: number
-  address: string
-}
+// Interface for account props
 
 
 
@@ -59,21 +55,6 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
   const w = useWallet()
   const ac = useAccounts()
   const net = useNetwork()
-  // Temporary transactions (we'll implement real data later)
-  const tempTransactions: Transaction[] = [
-    {
-      type: 'receive',
-      amount: '100.00000000',
-      timestamp: Date.now() - 3600000,
-      address: '1234...5678'
-    },
-    {
-      type: 'send',
-      amount: '50.00000000',
-      timestamp: Date.now() - 7200000,
-      address: '8765...4321'
-    }
-  ]
 
 
   // Check activation status on mount and refresh
@@ -145,10 +126,13 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
   const handleRefresh = async () => {
     if(refreshing) return;
     setRefreshing(true)
-    checkActivation().finally(() => {
-      setRefreshing(false)
-    })
+    try {
+      await checkActivation();
+    } finally {
+      setRefreshing(false);
+    }
   }
+  
   const network = useNetwork()
   logger.info("BLOCK HEIGHT", network.blockHeight)
 
@@ -173,7 +157,7 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
   }
 
   return (
-    <div className="h-full w-full flex flex-col bg-gradient-to-b from-background to-background/50">
+    <div className="flex flex-col h-full w-full p-4 md:p-8 overflow-auto">
       {/* Floating Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -424,27 +408,7 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
           </div>
 
           {/* Recent Activity */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="bg-card rounded-xl border-2 border-border/50"
-          >
-            <div className="p-4 border-b border-border/50 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                <h3 className="font-semibold text-foreground">Recent Activity</h3>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs hover:text-primary hover:bg-primary/10"
-              >
-                View All
-              </Button>
-            </div>
-            {/* Transaction list will go here */}
-          </motion.div>
+          <RecentActivity account={account} onRefresh={handleRefresh} />
         </div>
       </div>
 
@@ -468,4 +432,4 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
       />
     </div>
   )
-} 
+}

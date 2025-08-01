@@ -1,0 +1,48 @@
+name: Build Chrome Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+  # Solo quando pushato tag v* (non per commit normali)
+
+jobs:
+  build-chrome:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build extension
+        run: pnpm build
+
+      - name: Get tag name
+        id: tag
+        run: echo "TAG_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
+      - name: Zip Chrome extension
+        run: |
+          cd dist
+          zip -r ../mochimo-chromium-${TAG_NAME}.zip .
+          cd ..
+
+      - name: Upload Chrome artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-extension-${{ env.TAG_NAME }}
+          path: mochimo-chromium-${{ env.TAG_NAME }}.zip
+          retention-days: 30  # Mantieni per 30 giorni per permettere la release unificata
