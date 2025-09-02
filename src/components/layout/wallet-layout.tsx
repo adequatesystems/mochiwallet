@@ -23,13 +23,21 @@ export function WalletLayout({
   const { viewMode, toggleViewMode, isExtension } = useViewMode()
   
   return (
-    <div className={cn(
+    <div
+      className={cn(
       "flex flex-col bg-background",
-      "h-screen",
-      viewMode === 'popup' ? 'w-[360px] h-[600px]' : 'w-screen h-screen'
-    )}>
-      {/* Fixed Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/50 shrink-0 bg-card/50">
+      // Responsive layout: usa dimensioni fisse solo in modalità popup per estensione
+      viewMode === 'popup' && isExtension ? 'w-[360px] h-[600px]' : 'w-full h-full min-h-screen',
+      // Quando è in modalità web o panel, centra il contenuto su schermi larghi
+      viewMode !== 'popup' && 'sm:px-4 md:px-6 lg:px-0'
+    )}
+      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
+    >
+      {/* Fixed Header with Safe Area for iOS */}
+      <div
+        className="flex items-center justify-between px-4 border-b border-border/50 shrink-0 bg-card/50"
+        style={{ minHeight: '56px' }}
+      >
         <div className="flex items-center gap-3">
           {showMenu ? (
             <Button
@@ -57,7 +65,7 @@ export function WalletLayout({
             </h1>
           </div>
         </div>
-        <div className="flex items-center ">
+        <div className="flex items-center">
           {isExtension && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -79,15 +87,22 @@ export function WalletLayout({
               </TooltipContent>
             </Tooltip>
           )}
+          <ThemeToggle />
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Main Content - Contenitore con larghezza massima per schermi larghi */}
       <div className="flex-1 relative overflow-hidden">
         <div className="absolute inset-0">
-          {children}
+          <div className={cn(
+            "h-full",
+            // In modalità web o panel su schermi larghi, limita la larghezza massima e centra
+            viewMode !== 'popup' && 'mx-auto lg:max-w-4xl xl:max-w-5xl'
+          )}>
+            {children}
+          </div>
         </div>
       </div>
     </div>
   )
-} 
+}

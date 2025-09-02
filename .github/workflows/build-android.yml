@@ -1,0 +1,84 @@
+
+name: Build Android App
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    name: Build Android APKs and App Bundle
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout android branch code
+        uses: actions/checkout@v4
+        with:
+          ref: android
+          fetch-depth: 0  # include tags
+
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Add Android platform (if missing)
+        run: npx cap add android || echo "Android platform already exists"
+
+      - name: Build web app
+        run: pnpm run build:web
+
+      - name: Setup Android before build
+        run: npm run setup:android
+
+      - name: Build debug APK
+        run: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleDebug
+
+      - name: Build release APK
+        run: |
+          cd android
+          ./gradlew assembleRelease
+
+      - name: Build release App Bundle (AAB)
+        run: |
+          cd android
+          ./gradlew bundleRelease
+
+      - name: Upload debug APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-${{ github.ref_name }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Upload release APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-${{ github.ref_name }}
+          path: android/app/build/outputs/apk/release/app-release-unsigned.apk
+          retention-days: 30
+
+      - name: Upload release AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-aab-${{ github.ref_name }}
+          path: android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 30

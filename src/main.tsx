@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { MochimoWalletProvider } from "mochimo-wallet"
 import { TooltipProvider } from '@radix-ui/react-tooltip'
 import { ViewModeProvider } from '@/lib/contexts/ViewModeContext'
+import { ApiEndpointProvider } from '@/lib/contexts/ApiEndpointContext'
 import { log } from "@/lib/utils/logging"
 
 
@@ -35,11 +36,13 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ViewModeProvider>
       <ThemeProvider defaultTheme="dark">
         <ErrorBoundary>
-          <MochimoWalletProvider>
-            <TooltipProvider>
-              <App />
-            </TooltipProvider>
-          </MochimoWalletProvider>
+          <ApiEndpointProvider>
+            <MochimoWalletProvider>
+              <TooltipProvider>
+                <App />
+              </TooltipProvider>
+            </MochimoWalletProvider>
+          </ApiEndpointProvider>
         </ErrorBoundary>
       </ThemeProvider>
     </ViewModeProvider>

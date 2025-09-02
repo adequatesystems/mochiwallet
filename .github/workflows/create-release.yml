@@ -1,0 +1,351 @@
+name: Create Unified Release
+
+on:
+  workflow_run:
+    workflows: ["Build Android App"]
+    types:
+      - completed
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    # runs-on: self-hosted
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get tag from workflow run
+        id: get-tag
+        run: |
+          TAG_NAME="${{ github.event.workflow_run.head_branch }}"
+          if [[ "$TAG_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+.*$ ]]; then
+            echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+            echo "Valid tag found: $TAG_NAME"
+          else
+            echo "No valid tag found, exiting"
+            exit 1
+          fi
+      - name: Set HEAD_SHA
+        run: |
+          echo "HEAD_SHA=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_ENV
+
+      - name: Check if release already exists
+        id: check-release
+        run: |
+          RELEASE_EXISTS=$(gh release view "${{ env.TAG_NAME }}" --repo "${{ github.repository }}" 2>/dev/null && echo "true" || echo "false")
+          echo "RELEASE_EXISTS=$RELEASE_EXISTS" >> $GITHUB_ENV
+          if [ "$RELEASE_EXISTS" = "true" ]; then
+            echo "Release already exists, will update it"
+          else
+            echo "New release will be created"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Wait for other builds to complete and find run IDs
+        run: |
+          echo "Waiting 30 seconds for other workflows to complete..."
+          sleep 30
+          
+          # Get the latest successful run IDs for each workflow on this tag
+          # Use event instead of branch since tags are events, not branches
+          CHROME_RUN_ID=$(gh run list --repo "${{ github.repository }}" \
+            --workflow="Build Chrome Extension" \
+            --status="completed" \
+            --limit=5 \
+            --json databaseId,headSha \
+            --jq '.[] | select(.headSha == "${{ env.HEAD_SHA }}") | .databaseId' | head -1)
+          
+          IOS_RUN_ID=$(gh run list --repo "${{ github.repository }}" \
+            --workflow="Build iOS App" \
+            --status="completed" \
+            --limit=5 \
+            --json databaseId,headSha \
+            --jq '.[] | select(.headSha == "${{ env.HEAD_SHA }}") | .databaseId' | head -1)
+          
+          ANDROID_RUN_ID=$(gh run list --repo "${{ github.repository }}" \
+            --workflow="Build Android App" \
+            --status="completed" \
+            --limit=5 \
+            --json databaseId,headSha \
+            --jq '.[] | select(.headSha == "${{ env.HEAD_SHA }}") | .databaseId' | head -1)
+          
+          echo "CHROME_RUN_ID=$CHROME_RUN_ID" >> $GITHUB_ENV
+          echo "IOS_RUN_ID=$IOS_RUN_ID" >> $GITHUB_ENV
+          echo "ANDROID_RUN_ID=$ANDROID_RUN_ID" >> $GITHUB_ENV
+          
+          echo "Chrome Run ID: $CHROME_RUN_ID"
+          echo "iOS Run ID: $IOS_RUN_ID"
+          echo "Android Run ID: $ANDROID_RUN_ID"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Chrome artifacts
+        continue-on-error: true
+        if: env.CHROME_RUN_ID != 'null' && env.CHROME_RUN_ID != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: chrome-extension-${{ env.TAG_NAME }}
+          path: ./chrome-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.CHROME_RUN_ID }}
+
+      - name: Download iOS source artifacts
+        continue-on-error: true
+        if: env.IOS_RUN_ID != 'null' && env.IOS_RUN_ID != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-source-${{ env.TAG_NAME }}
+          path: ./ios-source-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.IOS_RUN_ID }}
+          
+      - name: Check iOS source artifact download
+        if: env.IOS_RUN_ID != 'null' && env.IOS_RUN_ID != ''
+        run: |
+          echo "Checking iOS source artifact download:"
+          ls -la ./ios-source-artifacts || echo "No files found"
+          
+          if [ ! -d "./ios-source-artifacts" ] || [ -z "$(ls -A ./ios-source-artifacts)" ]; then
+            echo "iOS source artifact download failed, trying alternative method..."
+            mkdir -p ./ios-source-artifacts
+            
+            # Get artifact ID directly
+            ARTIFACT_ID=$(gh api repos/${{ github.repository }}/actions/runs/${{ env.IOS_RUN_ID }}/artifacts \
+              --jq '.artifacts[] | select(.name=="ios-source-${{ env.TAG_NAME }}") | .id')
+            
+            if [ -n "$ARTIFACT_ID" ]; then
+              echo "Found artifact ID: $ARTIFACT_ID"
+              
+              # Download the artifact archive directly
+              gh api repos/${{ github.repository }}/actions/artifacts/$ARTIFACT_ID/zip \
+                -H "Accept: application/vnd.github.v3+json" \
+                --output ./ios-source-artifacts/ios-source.zip
+              
+              # Extract if the download was successful
+              if [ -f "./ios-source-artifacts/ios-source.zip" ]; then
+                cd ./ios-source-artifacts
+                unzip ios-source.zip
+                rm ios-source.zip
+                cd ..
+              fi
+            else
+              echo "No matching artifact found via API"
+            fi
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download iOS IPA artifacts
+        continue-on-error: true
+        if: env.IOS_RUN_ID != 'null' && env.IOS_RUN_ID != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: ios-ipa-${{ env.TAG_NAME }}
+          path: ./ios-ipa-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.IOS_RUN_ID }}
+          
+      - name: Download Android Debug APK artifacts
+        continue-on-error: true
+        if: env.ANDROID_RUN_ID != 'null' && env.ANDROID_RUN_ID != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: android-debug-${{ env.TAG_NAME }}
+          path: ./android-debug-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.ANDROID_RUN_ID }}
+          
+      - name: Download Android Release APK artifacts
+        continue-on-error: true
+        if: env.ANDROID_RUN_ID != 'null' && env.ANDROID_RUN_ID != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-${{ env.TAG_NAME }}
+          path: ./android-release-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.ANDROID_RUN_ID }}
+
+      - name: Download Android Release AAB artifacts
+        continue-on-error: true
+        if: env.ANDROID_RUN_ID != 'null' && env.ANDROID_RUN_ID != ''
+        uses: actions/download-artifact@v4
+        with:
+          name: android-release-aab-${{ env.TAG_NAME }}
+          path: ./android-release-aab-artifacts
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          run-id: ${{ env.ANDROID_RUN_ID }}
+
+      - name: Prepare release files
+        run: |
+          mkdir -p release-files
+          echo "--- Chrome artifacts directory ---"
+          ls -l ./chrome-artifacts || echo "No chrome artifacts directory"
+          echo "--- iOS source artifacts directory ---"
+          ls -lR ./ios-source-artifacts || echo "No ios source artifacts directory"
+          echo "--- iOS IPA artifacts directory ---"
+          ls -lR ./ios-ipa-artifacts || echo "No ios ipa artifacts directory"
+          echo "--- Android APK artifacts directory ---"
+          ls -lR ./android-debug-artifacts || echo "No Android debug artifacts directory"
+          ls -lR ./android-release-artifacts || echo "No Android release artifacts directory"
+
+          # Chrome extension
+          if [ -f "./chrome-artifacts/mochimo-chromium-${{ env.TAG_NAME }}.zip" ]; then
+            cp "./chrome-artifacts/mochimo-chromium-${{ env.TAG_NAME }}.zip" ./release-files/
+            echo "✅ Chrome extension added"
+          else
+            echo "❌ Chrome extension not found"
+          fi
+
+          # iOS source
+          IOS_ZIP="./ios-source-artifacts/ios-source-${{ env.TAG_NAME }}.zip"
+          if [ -f "$IOS_ZIP" ]; then
+            cp "$IOS_ZIP" ./release-files/mochimo-ios-source-${{ env.TAG_NAME }}.zip
+            echo "✅ iOS source added (direct match)"
+          else
+            echo "❌ iOS source file not found at expected path: $IOS_ZIP"
+            echo "Searching for any zip file in ios-source-artifacts directory (including subdirectories):"
+            FOUND_ZIP=$(find ./ios-source-artifacts -type f -name "*.zip" | head -1)
+            if [ -n "$FOUND_ZIP" ]; then
+              cp "$FOUND_ZIP" ./release-files/mochimo-ios-source-${{ env.TAG_NAME }}.zip
+              echo "✅ iOS source added from search: $FOUND_ZIP"
+            else
+              echo "❌ No iOS source zip files found in ios-source-artifacts"
+            fi
+          fi
+
+          # iOS IPA
+          if [ -d "./ios-ipa-artifacts" ] && [ "$(ls -A ./ios-ipa-artifacts)" ]; then
+            FOUND_IPA=$(find ./ios-ipa-artifacts -type f -name "*.ipa" | head -1)
+            if [ -n "$FOUND_IPA" ]; then
+              cp "$FOUND_IPA" ./release-files/mochimo-ios-${{ env.TAG_NAME }}.ipa
+              echo "✅ iOS IPA added: $FOUND_IPA"
+            else
+              echo "❌ No iOS IPA file found in ios-ipa-artifacts"
+            fi
+          else
+            echo "❌ iOS IPA not found (normal if certificates not configured)"
+          fi
+          
+          # Android Debug APK
+          if [ -d "./android-debug-artifacts" ] && [ "$(ls -A ./android-debug-artifacts)" ]; then
+            FOUND_APK_DEBUG=$(find ./android-debug-artifacts -type f -name "*.apk" | head -1)
+            if [ -n "$FOUND_APK_DEBUG" ]; then
+              cp "$FOUND_APK_DEBUG" ./release-files/mochimo-android-debug-${{ env.TAG_NAME }}.apk
+              echo "✅ Android Debug APK added: $FOUND_APK_DEBUG"
+            else
+              echo "❌ No Android Debug APK file found in android-debug-artifacts"
+            fi
+          else
+            echo "❌ Android Debug APK not found"
+          fi
+          
+          # Android Release APK
+          if [ -d "./android-release-artifacts" ] && [ "$(ls -A ./android-release-artifacts)" ]; then
+            FOUND_APK_RELEASE=$(find ./android-release-artifacts -type f -name "*.apk" | head -1)
+            if [ -n "$FOUND_APK_RELEASE" ]; then
+              cp "$FOUND_APK_RELEASE" ./release-files/mochimo-android-release-${{ env.TAG_NAME }}.apk
+              echo "✅ Android Release APK added: $FOUND_APK_RELEASE"
+            else
+              echo "❌ No Android Release APK file found in android-release-artifacts"
+            fi
+          else
+            echo "❌ Android Release APK not found"
+          fi
+
+          # Android Release AAB
+          if [ -d "./android-release-aab-artifacts" ] && [ "$(ls -A ./android-release-aab-artifacts)" ]; then
+            FOUND_AAB_RELEASE=$(find ./android-release-aab-artifacts -type f -name "*.aab" | head -1)
+            if [ -n "$FOUND_AAB_RELEASE" ]; then
+              cp "$FOUND_AAB_RELEASE" ./release-files/mochimo-android-release-${{ env.TAG_NAME }}.aab
+              echo "✅ Android Release AAB added: $FOUND_AAB_RELEASE"
+            else
+              echo "❌ No Android Release AAB file found in android-release-aab-artifacts"
+            fi
+          else
+            echo "❌ Android Release AAB not found"
+          fi
+
+          echo "Files in release:"
+          ls -la ./release-files/
+
+      - name: Generate dynamic release notes
+        id: relnotes
+        run: |
+          TAG=${{ env.TAG_NAME }}
+          BODY="## Mochimo Wallet Release $TAG\n\n### Files included:\n"
+          # Chrome
+          if [ -f "./release-files/mochimo-chromium-$TAG.zip" ]; then
+            BODY+=$'\n#### Chrome Extension\n- **mochimo-chromium-'$TAG'.zip**: Ready-to-install Chrome extension'
+          fi
+          # iOS
+          if [ -f "./release-files/mochimo-ios-source-$TAG.zip" ]; then
+            BODY+=$'\n#### iOS App\n- **mochimo-ios-source-'$TAG'.zip**: iOS project files for Xcode'
+          fi
+          if [ -f "./release-files/mochimo-ios-$TAG.ipa" ]; then
+            BODY+=$'\n- **mochimo-ios-'$TAG'.ipa**: Compiled iOS app for App Store'
+          fi
+          # Android
+          if [ -f "./release-files/mochimo-android-debug-$TAG.apk" ]; then
+            BODY+=$'\n#### Android App'
+            BODY+=$'\n- **mochimo-android-debug-'$TAG'.apk**: Debug APK for testing'
+          fi
+          if [ -f "./release-files/mochimo-android-release-$TAG.apk" ]; then
+            BODY+=$'\n- **mochimo-android-release-'$TAG'.apk**: Release APK for installation'
+          fi
+          if [ -f "./release-files/mochimo-android-release-$TAG.aab" ]; then
+            BODY+=$'\n- **mochimo-android-release-'$TAG'.aab**: Android App Bundle for Play Store'
+          fi
+
+          BODY+=$'\n\n---\n\n### Installation Instructions\n'
+          # Chrome instructions
+          if [ -f "./release-files/mochimo-chromium-$TAG.zip" ]; then
+            BODY+=$'\n**Chrome Extension:**\n'
+            BODY+=$'1. Scarica **mochimo-chromium-'$TAG'.zip**\n2. Estrai il contenuto in una cartella\n3. Apri Chrome e vai su `chrome://extensions`\n4. Abilita la modalità sviluppatore\n5. Clicca su "Carica estensione non pacchettizzata" e seleziona la cartella estratta\n'
+          fi
+          # iOS instructions
+          if [ -f "./release-files/mochimo-ios-source-$TAG.zip" ]; then
+            BODY+=$'\n**iOS App (Xcode):**\n'
+            BODY+=$'1. Scarica **mochimo-ios-source-'$TAG'.zip**\n2. Estrai e apri `App.xcworkspace` in Xcode\n3. Compila ed esegui su simulatore o dispositivo\n'
+          fi
+          if [ -f "./release-files/mochimo-ios-$TAG.ipa" ]; then
+            BODY+=$'\n**iOS App Store:**\n- Usa il file `.ipa` con Xcode o Transporter per la pubblicazione su App Store\n'
+          fi
+          # Android instructions
+          if [ -f "./release-files/mochimo-android-debug-$TAG.apk" ] || [ -f "./release-files/mochimo-android-release-$TAG.apk" ] || [ -f "./release-files/mochimo-android-release-$TAG.aab" ]; then
+            BODY+=$'\n**Android App:**\n'
+            if [ -f "./release-files/mochimo-android-debug-$TAG.apk" ]; then
+              BODY+=$'- Scarica **mochimo-android-debug-'$TAG'.apk** per installazione diretta su dispositivo\n'
+            fi
+            if [ -f "./release-files/mochimo-android-release-$TAG.apk" ]; then
+              BODY+=$'- Scarica **mochimo-android-release-'$TAG'.apk** per installazione diretta su dispositivo\n'
+            fi
+            if [ -f "./release-files/mochimo-android-release-$TAG.aab" ]; then
+              BODY+=$'- Scarica **mochimo-android-release-'$TAG'.aab** per pubblicazione su Play Store (Google Play Console)\n'
+            fi
+            if [ -f "./release-files/mochimo-android-debug-$TAG.apk" ] || [ -f "./release-files/mochimo-android-release-$TAG.apk" ]; then
+              BODY+=$'- Trasferisci l’APK sul dispositivo, abilita l’installazione da sorgenti sconosciute e apri il file per installare\n'
+            fi
+          fi
+
+          BODY+=$'\n---\n\nRelease generata automaticamente da GitHub Actions.\n\n- Chrome build da: `main`\n- iOS build da: `ios`\n- Android build da: `android`\n\nUltimo aggiornamento: '$(date -u)'\n'
+          echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+          echo "$BODY" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Create or Update GitHub Release
+        if: env.CHROME_RUN_ID != '' || env.IOS_RUN_ID != '' || env.ANDROID_RUN_ID != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          files: ./release-files/*
+          body: ${{ env.RELEASE_BODY }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

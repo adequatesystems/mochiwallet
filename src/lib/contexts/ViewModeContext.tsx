@@ -21,15 +21,23 @@ export function ViewModeProvider({ children }: { children: React.ReactNode }) {
     const isExtension = typeof chrome !== 'undefined' && chrome.runtime !== undefined
 
     useEffect(() => {
-        // Retrieve the stored view mode from chrome.storage.local
-        chrome.storage.local.get('viewMode', (result) => {
-            if (result.viewMode) {
-                setViewMode(result.viewMode)
+        // Retrieve the stored view mode from chrome.storage.local or localStorage fallback
+        if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
+            chrome.storage.local.get('viewMode', (result) => {
+                if (result.viewMode) {
+                    setViewMode(result.viewMode)
+                }
+                if (result.viewMode === 'panel' && chrome.runtime) {
+                    chrome.runtime.connect({ name: 'mochimo_side_panel' });
+                }
+            })
+        } else {
+            // Fallback: use localStorage
+            const stored = localStorage.getItem('viewMode') as ViewMode | null;
+            if (stored === 'popup' || stored === 'panel') {
+                setViewMode(stored);
             }
-            if (result.viewMode === 'panel') {
-                chrome.runtime.connect({ name: 'mochimo_side_panel' });
-            }
-        })
+        }
     }, [])
 
     const openPanelMode = async () => {

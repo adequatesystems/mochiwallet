@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   LogOut,
@@ -11,13 +11,17 @@ import {
   Lock,
   Eye,
   EyeOff,
-  Key
+  Key,
+  Globe,
+  AlertCircle,
+  Check,
+  ChevronDown
 } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
-import { StorageProvider, useWallet } from 'mochimo-wallet'
+import { StorageProvider, useWallet, useApiEndpoint, getApiEndpoints } from 'mochimo-wallet'
 import { motion } from 'framer-motion'
 import {
-  AlertDialog,
+  AlertDialog, 
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
@@ -26,10 +30,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu" 
 import { version } from '../../../package.json'
 import { sessionManager } from '@/lib/services/SessionManager'
 import { log } from "@/lib/utils/logging"
 import { Input } from '@/components/ui/input'
+import { env } from '@/config/env'
+
 const logger = log.getLogger("wallet-settings");
 
 type Theme = 'dark' | 'light' | 'system'
@@ -40,6 +53,7 @@ interface SettingsDialogProps {
 }
 
 const FEATURE_FLAG_RECOVERY_PHRASE = false
+
 export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [showExportConfirm, setShowExportConfirm] = useState(false)
@@ -55,6 +69,36 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
   const [recoveryError, setRecoveryError] = useState<string | null>(null)
   const [showRecoveryPhrase, setShowRecoveryPhrase] = useState(false)
   const [recoveryPhrase, setRecoveryPhrase] = useState('')
+  const [customEndpoint, setCustomEndpoint] = useState('')
+  const [endpointError, setEndpointError] = useState<string | null>(null)
+  
+  // Use the API endpoint hook from mochimo-wallet library
+  const [currentEndpoint, setApiEndpoint, endpointLoading, endpointError2] = useApiEndpoint()
+  
+  // Get available endpoints from the library
+  const availableEndpoints = getApiEndpoints()
+  
+  // State for UI display
+  const [selectedEndpoint, setSelectedEndpoint] = useState('')
+
+  // Load current endpoint and set display state
+  useEffect(() => {
+    if (currentEndpoint) {
+      // Check if current endpoint matches any predefined endpoint
+      const predefinedEndpoint = availableEndpoints.find(e => e.url === currentEndpoint)
+      if (predefinedEndpoint) {
+        setSelectedEndpoint(currentEndpoint)
+        setCustomEndpoint('')
+      } else {
+        // It's a custom endpoint
+        setSelectedEndpoint('custom')
+        setCustomEndpoint(currentEndpoint)
+      }
+    } else if (availableEndpoints.length > 0) {
+      // Default to the first endpoint if none is set
+      setSelectedEndpoint(availableEndpoints[0].url)
+    }
+  }, [currentEndpoint, availableEndpoints])
 
   const handleLogout = async () => {
     try {
@@ -118,6 +162,61 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
     } catch (error) {
       logger.error('Error showing recovery phrase:', error)
       setRecoveryError('Failed to verify password')
+    }
+  }
+
+  const handleEndpointChange = async (endpoint: string) => {
+    setSelectedEndpoint(endpoint)
+    setEndpointError(null)
+    
+    if (endpoint === 'custom') {
+      // Don't save yet, wait for custom input
+      return
+    }
+    
+    // Update the endpoint using the library hook
+    try {
+      const success = await setApiEndpoint(endpoint)
+      
+      if (success) {
+        logger.info('API endpoint changed successfully to:', endpoint)
+        // You can add a toast notification here if you have one
+      } else {
+        setEndpointError('Failed to update API endpoint. Please try again.')
+        logger.error('Failed to update API endpoint')
+      }
+    } catch (error) {
+      setEndpointError('Error updating API endpoint')
+      logger.error('Error updating API endpoint:', error)
+    }
+  }
+  
+  const handleCustomEndpointSave = async () => {
+    if (!customEndpoint.trim()) {
+      setEndpointError('Please enter an API endpoint URL')
+      return
+    }
+    
+    if (!customEndpoint.startsWith('https://') && !customEndpoint.startsWith('http://')) {
+      setEndpointError('API endpoint should use HTTPS or HTTP')
+      return
+    }
+    
+    // Update the endpoint using the library hook
+    try {
+      const success = await setApiEndpoint(customEndpoint)
+      
+      if (success) {
+        setEndpointError(null)
+        logger.info('Custom API endpoint changed successfully to:', customEndpoint)
+        // You can add a toast notification here if you have one
+      } else {
+        setEndpointError('Failed to update API endpoint. Please check the URL and try again.')
+        logger.error('Failed to update custom API endpoint')
+      }
+    } catch (error) {
+      setEndpointError('Error updating custom API endpoint')
+      logger.error('Error updating custom API endpoint:', error)
     }
   }
 
@@ -199,6 +298,81 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
             </div>
           </div>
 
+          {/* API Endpoint Settings */}
+          <div className="space-y-3 pt-4">
+            <h2 className="text-lg font-semibold">API Endpoint</h2>
+            <p className="text-sm text-muted-foreground">
+              Select which Mochimo API server to connect to
+            </p>
+            <div className="space-y-4">
+              {endpointLoading ? (
+                <div className="text-sm text-muted-foreground">Loading endpoint settings...</div>
+              ) : (
+                <>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between">
+                        <div className="flex items-center">
+                          <Globe className="h-4 w-4 mr-2" />
+                          {selectedEndpoint === 'custom' 
+                            ? 'Custom API' 
+                            : availableEndpoints.find(ep => ep.url === selectedEndpoint)?.label || 'Select Endpoint'}
+                        </div>
+                        <ChevronDown className="h-4 w-4 opacity-50" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-full" align="start">
+                      {availableEndpoints.map(endpoint => (
+                        <DropdownMenuItem 
+                          key={endpoint.url}
+                          className="flex items-center justify-between"
+                          onClick={() => handleEndpointChange(endpoint.url)}
+                        >
+                          <span className="flex items-center">
+                            <Globe className="h-4 w-4 mr-2" />
+                            {endpoint.label}
+                          </span>
+                          {selectedEndpoint === endpoint.url && <Check className="h-4 w-4" />}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  
+                  {selectedEndpoint === 'custom' && (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="https://your-api-endpoint.com"
+                          value={customEndpoint}
+                          onChange={(e) => {
+                            setCustomEndpoint(e.target.value)
+                            setEndpointError(null)
+                          }}
+                          className={endpointError ? "border-destructive" : ""}
+                        />
+                        <Button onClick={handleCustomEndpointSave}>Save</Button>
+                      </div>
+                      
+                      {endpointError && (
+                        <div className="flex items-center text-destructive text-sm">
+                          <AlertCircle className="h-4 w-4 mr-1" />
+                          {endpointError}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {endpointError2 && (
+                    <div className="flex items-center text-destructive text-sm">
+                      <AlertCircle className="h-4 w-4 mr-1" />
+                      {endpointError2}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+
           {/* Security Section */}
           <div className="space-y-3 pt-4">
             <h2 className="text-lg font-semibold">Security</h2>
@@ -226,7 +400,6 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
               </Button>
             </div>
           </div>
-
 
           {/* Version Info */}
           <div className="pt-8 text-center">
@@ -373,4 +546,4 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
       </AlertDialog>
     </>
   )
-} 
+}

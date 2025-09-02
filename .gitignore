@@ -34,6 +34,19 @@ yarn-error.log*
 .DS_Store
 *.pem
 ui_screenshots
+
+# iOS - ignore entire platform folder
+ios/
+
+# Track iOS assets in separate folder
+!assets/ios/
+
+# Android - ignore entire platform folder
+android/
+
+# Track Android assets in separate folder
+!assets/android/
+
 # Environment
 .env
 .env.local
@@ -42,3 +55,5 @@ ui_screenshots
 .env.production.local
 .env*.local
 .env.production
+package-lock.json
+src/assets/
