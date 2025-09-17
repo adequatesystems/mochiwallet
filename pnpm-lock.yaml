@@ -71,6 +71,9 @@ importers:
       crypto-js:
         specifier: ^4.2.0
         version: 4.2.0
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       emoji-picker-react:
         specifier: ^4.12.0
         version: 4.12.0(react@18.3.1)
@@ -93,11 +96,11 @@ importers:
         specifier: ^0.468.0
         version: 0.468.0(react@18.3.1)
       mochimo-mesh-api-client:
-        specifier: github:adequatesystems/mochimo-mesh-api-client#v1.0.4
-        version: https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/7edd2ebed4fac4ed649f3f7ca588d444f41a3ece(crypto-js@4.2.0)(mochimo-wots@https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910)
+        specifier: github:adequatesystems/mochimo-mesh-api-client#v1.0.5-dev
+        version: https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/6aba0f3720ef5c1229a85ffb7fa024a8a6b7fdeb(crypto-js@4.2.0)(mochimo-wots@https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910)
       mochimo-wallet:
-        specifier: github:adequatesystems/mochimo-wallet#v1.1.44
-        version: https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/07b98939c62bff760d7c06552488dc552266a009(@types/react@18.3.16)(immer@10.1.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(redux@5.0.1)
+        specifier: github:adequatesystems/mochimo-wallet#v1.1.47-dev
+        version: https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/9d457eb8dd4dac42d3b9db75d55bf48ccfcfa8af(@types/react@18.3.16)(immer@10.1.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(redux@5.0.1)
       mochimo-wots:
         specifier: github:adequatesystems/mochimo-wots#v1.2.8
         version: https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910
@@ -1895,6 +1898,9 @@ packages:
     resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
     engines: {node: '>= 12'}
 
+  date-fns@4.1.0:
+    resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
+
   debug@2.6.9:
     resolution: {integrity: sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==}
     peerDependencies:
@@ -2774,16 +2780,16 @@ packages:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
     engines: {node: '>=16 || 14 >=14.17'}
 
-  mochimo-mesh-api-client@https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/7edd2ebed4fac4ed649f3f7ca588d444f41a3ece:
-    resolution: {tarball: https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/7edd2ebed4fac4ed649f3f7ca588d444f41a3ece}
-    version: 1.0.4
+  mochimo-mesh-api-client@https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/6aba0f3720ef5c1229a85ffb7fa024a8a6b7fdeb:
+    resolution: {tarball: https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/6aba0f3720ef5c1229a85ffb7fa024a8a6b7fdeb}
+    version: 1.0.5
     peerDependencies:
       crypto-js: ^4.2.0
       mochimo-wots: ^1.2.1
 
-  mochimo-wallet@https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/07b98939c62bff760d7c06552488dc552266a009:
-    resolution: {tarball: https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/07b98939c62bff760d7c06552488dc552266a009}
-    version: 1.1.44
+  mochimo-wallet@https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/9d457eb8dd4dac42d3b9db75d55bf48ccfcfa8af:
+    resolution: {tarball: https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/9d457eb8dd4dac42d3b9db75d55bf48ccfcfa8af}
+    version: 1.1.46
     peerDependencies:
       react: ^18.2.0
       react-dom: ^18.2.0
@@ -5372,6 +5378,8 @@ snapshots:
 
   data-uri-to-buffer@4.0.1: {}
 
+  date-fns@4.1.0: {}
+
   debug@2.6.9:
     dependencies:
       ms: 2.0.0
@@ -6451,17 +6459,17 @@ snapshots:
 
   minipass@7.1.2: {}
 
-  mochimo-mesh-api-client@https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/7edd2ebed4fac4ed649f3f7ca588d444f41a3ece(crypto-js@4.2.0)(mochimo-wots@https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910):
+  mochimo-mesh-api-client@https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/6aba0f3720ef5c1229a85ffb7fa024a8a6b7fdeb(crypto-js@4.2.0)(mochimo-wots@https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910):
     dependencies:
       crypto-js: 4.2.0
       mochimo-wots: https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910
 
-  mochimo-wallet@https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/07b98939c62bff760d7c06552488dc552266a009(@types/react@18.3.16)(immer@10.1.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(redux@5.0.1):
+  mochimo-wallet@https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/9d457eb8dd4dac42d3b9db75d55bf48ccfcfa8af(@types/react@18.3.16)(immer@10.1.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(redux@5.0.1):
     dependencies:
       '@reduxjs/toolkit': 2.5.0(react-redux@9.2.0(@types/react@18.3.16)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
       '@scure/bip39': 1.5.0
       crypto-js: 4.2.0
-      mochimo-mesh-api-client: https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/7edd2ebed4fac4ed649f3f7ca588d444f41a3ece(crypto-js@4.2.0)(mochimo-wots@https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910)
+      mochimo-mesh-api-client: https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/6aba0f3720ef5c1229a85ffb7fa024a8a6b7fdeb(crypto-js@4.2.0)(mochimo-wots@https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910)
       mochimo-wots: https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910
       node-forge: 1.3.1
       pako: 2.1.0

@@ -1,18 +1,20 @@
 import { Button } from '@/components/ui/button'
-import { AnimatePresence, motion } from 'framer-motion'
+import { Drawer, DrawerContent } from '@/components/ui/drawer'
+import { motion } from 'framer-motion'
 import {
+  AlertTriangle,
   CheckCircle,
   Clock,
   Coins,
   Copy,
   QrCode,
   RefreshCcw,
+  RefreshCw,
   Send,
   Tag as TagIcon,
-  Wallet,
-  AlertTriangle
+  Wallet
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Account, MasterSeed, NetworkProvider, useAccounts, useNetwork, useWallet } from 'mochimo-wallet'
 
@@ -22,27 +24,18 @@ import {
   TooltipTrigger
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { SendModal } from './SendModal'
-import {TagUtils} from "mochimo-wots"
-import { ReceiveDialog } from './ReceiveDialog'
-import { ManageAccountsDialog } from './ManageAccountsDialog'
 import { log } from "@/lib/utils/logging"
+import { TagUtils } from "mochimo-wots"
+import { ManageAccountsDialog } from './ManageAccountsDialog'
+import { ReceiveDialog } from './ReceiveDialog'
+import { SendModal } from './SendModal'
+import { TransactionList, TransactionListRef } from './TransactionList'
 const logger = log.getLogger("wallet");
 
 interface AccountViewProps {
   account: Account
   onUpdate: (updated: Account) => void
 }
-
-// Temporary transaction type (we'll expand this later)
-interface Transaction {
-  type: 'send' | 'receive'
-  amount: string
-  timestamp: number
-  address: string
-}
-
-
 
 export function AccountView({ account, onUpdate }: AccountViewProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -55,25 +48,13 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
   const [copied, setCopied] = useState(false)
   const [receiveModalOpen, setReceiveModalOpen] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+  const [showAllTransactions, setShowAllTransactions] = useState(false)
+  
+  const transactionListRef = useRef<TransactionListRef>(null)
 
   const w = useWallet()
   const ac = useAccounts()
   const net = useNetwork()
-  // Temporary transactions (we'll implement real data later)
-  const tempTransactions: Transaction[] = [
-    {
-      type: 'receive',
-      amount: '100.00000000',
-      timestamp: Date.now() - 3600000,
-      address: '1234...5678'
-    },
-    {
-      type: 'send',
-      amount: '50.00000000',
-      timestamp: Date.now() - 7200000,
-      address: '8765...4321'
-    }
-  ]
 
 
   // Check activation status on mount and refresh
@@ -430,20 +411,37 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
             transition={{ delay: 0.4 }}
             className="bg-card rounded-xl border-2 border-border/50"
           >
-            <div className="p-4 border-b border-border/50 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" />
                 <h3 className="font-semibold text-foreground">Recent Activity</h3>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs hover:text-primary hover:bg-primary/10"
-              >
-                View All
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    if (transactionListRef.current) {
+                      transactionListRef.current.refresh()
+                    }
+                  }}
+                  className="h-8 w-8 p-0"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllTransactions(true)}
+                  className="h-8 px-3 text-xs"
+                >
+                  Show All
+                </Button>
+              </div>
             </div>
-            {/* Transaction list will go here */}
+            <div className="px-2 py-2">
+              <TransactionList ref={transactionListRef} account={account} />
+            </div>
           </motion.div>
         </div>
       </div>
@@ -451,6 +449,12 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
       <SendModal
         isOpen={sendModalOpen}
         onClose={() => setSendModalOpen(false)}
+        onTransactionSent={() => {
+          // Refresh the transaction list when a transaction is sent
+          if (transactionListRef.current) {
+            transactionListRef.current.refresh()
+          }
+        }}
       />
 
       <ReceiveDialog
@@ -466,6 +470,31 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
         initialAccount={account}
         showBack={false}
       />
+
+      {/* Full Transaction View Drawer */}
+      <Drawer open={showAllTransactions} onOpenChange={setShowAllTransactions}>
+        <DrawerContent className="max-h-[85vh]">
+          <div className="flex items-center justify-between p-4 border-b">
+            <h2 className="text-xl font-semibold">All Transactions</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAllTransactions(false)}
+              className="h-8 w-8 p-0"
+            >
+              ×
+            </Button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4">
+            <TransactionList 
+              ref={transactionListRef} 
+              account={account} 
+              showAll={true}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 } 

@@ -23,6 +23,7 @@ import {
 interface SendModalProps {
   isOpen: boolean
   onClose: () => void
+  onTransactionSent?: () => void // Callback when transaction is sent successfully
 }
 import { log } from "@/lib/utils/logging"
 const logger = log.getLogger("wallet-send");
@@ -36,7 +37,7 @@ interface TransactionDetails {
   change: bigint
 }
 
-export function SendModal({ isOpen, onClose }: SendModalProps) {
+export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps) {
   const [step, setStep] = useState<Step>('details')
   const [destination, setDestination] = useState('')
   const [amount, setAmount] = useState('')
@@ -257,6 +258,10 @@ export function SendModal({ isOpen, onClose }: SendModalProps) {
         await acc.updateAccount(acc.selectedAccount!, { wotsIndex: currAccount.wotsIndex + 1 })
         setSuccess({ txid: result })
         setStep('success')
+        // Call the refresh callback to update the transaction list
+        if (onTransactionSent) {
+          onTransactionSent()
+        }
       } else {
         throw new Error(result || 'Transaction failed')
       }
