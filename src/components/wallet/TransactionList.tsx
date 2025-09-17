@@ -193,7 +193,7 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
                 type="button"
                 aria-label={pending ? 'Pending' : 'Confirmed'}
                 className={cn(
-                  "h-4 w-4 p-0 rounded-full flex items-center justify-center cursor-help",
+                  "h-4 w-4 p-0 rounded-full flex items-center justify-center cursor-default",
                   pending ? "bg-yellow-500 text-yellow-900" : "bg-green-500 text-white"
                 )}
                 onClick={(e) => e.stopPropagation()}
