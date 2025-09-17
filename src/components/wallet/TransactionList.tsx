@@ -1,6 +1,6 @@
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Drawer, DrawerContent } from '@/components/ui/drawer'
+import { Logo } from '@/components/ui/logo'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
@@ -58,33 +58,29 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
 
     const { accounts } = useAccounts()
 
+  // Build recent view: all pending + top 3 confirmed (sorted desc)
+  const recentCombined = (() => {
+    const sortDesc = (a: any, b: any) => (b.timestamp || 0) - (a.timestamp || 0)
+    const top3Confirmed = confirmedTransactions.slice(0, 3)
+    return [...pendingTransactions, ...top3Confirmed].sort(sortDesc)
+  })()
+
   // Determine which data source to use based on showAll prop
-  const displayTransactions = showAll ? infiniteTransactions : transactions
+  const displayTransactions = showAll ? infiniteTransactions : recentCombined
   const displayIsLoading = showAll ? infiniteLoading : isLoading
-  const displayHasMore = showAll ? infiniteHasMore : hasMore
+  const displayHasMore = showAll ? infiniteHasMore : false
   const displayError = error // Use the same error for both views
 
   // Expose refresh and loadMore methods to parent
   useImperativeHandle(ref, () => ({
     refresh: () => {
-      if (account) {
-        if (showAll) {
-          // For full view, we need to trigger a refresh of the infinite scroll
-          // This would require a refresh method on useInfiniteScroll
-          fetchAccountActivity({ limit: 20, offset: 0 })
-        } else {
-          fetchAccountActivity({ limit: 5, offset: 0 })
-        }
-      }
+      if (!account) return Promise.resolve()
+      const base = { includeMempool: true, includeConfirmed: true, offset: 0 }
+      return fetchAccountActivity({ ...base, limit: showAll ? 20 : 3 })
     },
     loadMore: () => {
-      if (account) {
-        if (showAll) {
-          loadMoreAccountActivity({ limit: 20 })
-        } else {
-          loadMoreAccountActivity({ limit: 2 })
-        }
-      }
+      if (!account) return Promise.resolve()
+      return loadMoreAccountActivity({ limit: 20, includeMempool: false })
     }
   }), [account, fetchAccountActivity, loadMoreAccountActivity, showAll])
 
@@ -101,11 +97,19 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
   }, [account?.tag])
 
   // Load initial data
+  // - Account view: always fetch pending + top 3 confirmed
+  // - Drawer (showAll): only fetch if we have no data yet; do not reset appended pages
   useEffect(() => {
-    if (account) {
-      fetchAccountActivity({ limit: showAll ? 2 : 5, offset: 0 })
+    if (!account) return
+    if (showAll) {
+      if (infiniteTransactions.length === 0) {
+        fetchAccountActivity({ limit: 20, includeMempool: true, includeConfirmed: true, offset: 0 })
+      }
+    } else {
+      fetchAccountActivity({ limit: 3, includeMempool: true, includeConfirmed: true, offset: 0 })
     }
-  }, [account?.tag, fetchAccountActivity, showAll])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [account?.tag, showAll])
 
     const handleCopyTxId = async (txId: string) => {
       try {
@@ -182,24 +186,24 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
             <Icon className={`h-4 w-4 ${color}`} />
           </div>
         {/* Status Badge Overlay */}
-        <div className="absolute -top-1 -right-1">
+        <div className="absolute -top-1 -right-1 z-10">
           <Tooltip>
             <TooltipTrigger asChild>
-              <Badge 
-                variant={pending ? "secondary" : "default"}
+              <button
+                type="button"
+                aria-label={pending ? 'Pending' : 'Confirmed'}
                 className={cn(
                   "h-4 w-4 p-0 rounded-full flex items-center justify-center cursor-help",
-                  pending 
-                    ? "bg-yellow-500 text-yellow-900" 
-                    : "bg-green-500 text-white"
+                  pending ? "bg-yellow-500 text-yellow-900" : "bg-green-500 text-white"
                 )}
+                onClick={(e) => e.stopPropagation()}
               >
                 {pending ? (
                   <Clock className="h-2.5 w-2.5" />
                 ) : (
                   <CheckCircle className="h-2.5 w-2.5" />
                 )}
-              </Badge>
+              </button>
             </TooltipTrigger>
             <TooltipContent>
               <p>{pending ? "Pending" : "Confirmed"}</p>
@@ -342,7 +346,7 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
             <Button
               variant="outline"
               size="sm"
-              onClick={() => fetchAccountActivity({ limit: 20, offset: 0 })}
+              onClick={() => fetchAccountActivity({ limit: 3, includeMempool: true, includeConfirmed: true, offset: 0 })}
               className="mt-2"
             >
               Try Again
@@ -433,25 +437,18 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
                           </Tooltip>
                         </div>
 
-                      {/* Line 3: From/To + Date */}
+                      {/* Line 3: From/To + Date (non-copyable in list) */}
                       <div className="flex items-center justify-between">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                if (tx.address) {
-                                  copyAddress(tx.address)
-                                }
-                              }}
-                              className="text-xs text-muted-foreground truncate flex-1 min-w-0 text-left hover:text-foreground transition-colors"
+                            <span
+                              className="text-xs text-muted-foreground truncate flex-1 min-w-0 text-left cursor-default"
                             >
                               {getSubtitle(tx.type, tx.address)}
-                            </button>
+                            </span>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p className="font-mono text-xs">{tx.address}</p>
-                            <p className="text-xs text-muted-foreground">Click to copy</p>
                           </TooltipContent>
                         </Tooltip>
                         <p className="text-[11px] text-muted-foreground flex-shrink-0 ml-2">
@@ -469,38 +466,15 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
           </AnimatePresence>
         </div>
 
-        {/* Load More Button */}
-        {hasMore && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex justify-center pt-4"
-          >
-            <Button
-              variant="outline"
-              onClick={() => loadMoreAccountActivity({ limit: 20 })}
-              disabled={displayIsLoading}
-              className="w-full"
-            >
-              {displayIsLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Loading more...
-                </>
-              ) : (
-                'Load More Transactions'
-              )}
-            </Button>
-          </motion.div>
-        )}
+        {/* Load More button removed from account view. Use drawer view's Load More below. */}
         {/* Drawer */}
         <Drawer open={!!drawerTxId} onOpenChange={(o) => !o && setDrawerTxId(null)}>
-          <DrawerContent className="p-0 max-h-[80vh]">
+          <DrawerContent className="p-0 h-[80vh] flex flex-col overflow-hidden">
             {(() => {
               const tx = transactions.find(t => t.txid === drawerTxId)
               if (!tx) return null
               return (
-                <div className="flex flex-col h-full max-h-[80vh] overflow-hidden">
+                <div className="flex flex-col h-full min-h-0">
                   {/* Header */}
                   <div className="flex items-center justify-between p-4 border-b">
                     <h2 className="text-lg font-semibold">{getTitle(tx.type)}</h2>
@@ -519,12 +493,23 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
                     {/* Transaction Icon and Amount */}
                     <div className="text-center mb-6">
                       <div className="relative inline-block mb-4">
+                        {/* Mochimo logo avatar */}
                         <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
-                          {getTransactionAvatar(tx.type, tx.pending)}
+                          <Logo size="md" className="text-primary" />
                         </div>
-                        {!tx.pending && (
-                          <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
-                            <CheckCircle className="h-4 w-4 text-white" />
+                        {/* Direction badge (IN/OUT icons) */}
+                        {tx.type !== 'mining' && (
+                          <div
+                            className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full flex items-center justify-center shadow-sm"
+                            style={{
+                              backgroundColor: tx.type === 'send' ? 'rgb(239 68 68)' : 'rgb(34 197 94)'
+                            }}
+                          >
+                            {tx.type === 'send' ? (
+                              <ArrowUpRight className="h-4 w-4 text-white" />
+                            ) : (
+                              <ArrowDownLeft className="h-4 w-4 text-white" />
+                            )}
                           </div>
                         )}
                       </div>

@@ -420,14 +420,21 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    if (transactionListRef.current) {
-                      transactionListRef.current.refresh()
+                  disabled={refreshing}
+                  onClick={async () => {
+                    if (!transactionListRef.current) return
+                    try {
+                      setRefreshing(true)
+                      await transactionListRef.current.refresh()
+                    } catch (e) {
+                      // no-op: optionally toast error here
+                    } finally {
+                      setRefreshing(false)
                     }
                   }}
                   className="h-8 w-8 p-0"
                 >
-                  <RefreshCw className="h-4 w-4" />
+                  <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
                 </Button>
                 <Button
                   variant="outline"
@@ -473,7 +480,7 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
 
       {/* Full Transaction View Drawer */}
       <Drawer open={showAllTransactions} onOpenChange={setShowAllTransactions}>
-        <DrawerContent className="max-h-[85vh]">
+        <DrawerContent className="p-0 h-[100dvh] flex flex-col overflow-hidden rounded-none">
           <div className="flex items-center justify-between p-4 border-b">
             <h2 className="text-xl font-semibold">All Transactions</h2>
             <Button
@@ -486,7 +493,7 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
             </Button>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-4 min-h-0">
             <TransactionList 
               ref={transactionListRef} 
               account={account} 
