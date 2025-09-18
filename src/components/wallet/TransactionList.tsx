@@ -76,7 +76,7 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
     refresh: () => {
       if (!account) return Promise.resolve()
       const base = { includeMempool: true, includeConfirmed: true, offset: 0 }
-      return fetchAccountActivity({ ...base, limit: showAll ? 20 : 3 })
+      return fetchAccountActivity({ ...base, limit: showAll ? 20 : 20 })
     },
     loadMore: () => {
       if (!account) return Promise.resolve()

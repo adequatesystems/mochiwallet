@@ -1,38 +1,29 @@
-import { Button } from "@/components/ui/button"
 import { WalletLayout } from "@/components/layout/wallet-layout"
-import { PlusCircle, Import, FileJson } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { FileJson, Import, PlusCircle } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { CreateWallet } from "@/components/wallet/CreateWallet"
-import { UnlockWallet } from "@/components/wallet/UnlockWallet"
 import { ImportWallet } from "@/components/wallet/ImportWallet"
+import { UnlockWallet } from "@/components/wallet/UnlockWallet"
 import { WalletDashboard } from "@/components/wallet/WalletDashboard"
-import { NetworkProvider, ProxyNetworkService, StorageProvider, MeshNetworkService, useWallet, MasterSeed } from "mochimo-wallet"
+import { useWallet } from "mochimo-wallet"
 
+import { ImportJsonWallet } from '@/components/wallet/ImportJsonWallet'
+import { log } from "@/lib/utils/logging"
 import { motion } from "framer-motion"
 import { Logo } from "./components/ui/logo"
-import { env } from "./config/env"
-import { sessionManager } from "./lib/services/SessionManager"
 import Loading from "./components/wallet/Loading"
-import { log } from "@/lib/utils/logging"
-import { ImportJsonWallet } from '@/components/wallet/ImportJsonWallet'
+// import { env } from "./config/env"
+import { sessionManager } from "./lib/services/SessionManager"
 const logger = log.getLogger("wallet");
-// const apiUrl = 'http://46.250.241.212:8081'
-// const apiUrl2 = 'http://35.208.202.76:8080'
+
 type WalletView = 'welcome' | 'create' | 'unlock' | 'dashboard' | 'import' | 'import-json' | 'loading'
 
-const network = new MeshNetworkService(env.apiUrl)
-NetworkProvider.setNetwork(network)
+// Network instance is now configured by MochimoWalletProvider via provider registry hydration
 
 
 
-//simple encrypt and decrypt functions
-const encrypt = (data: string) => {
-  return Buffer.from(data).toString('base64')
-}
-const decrypt = (data: string) => {
-  return Buffer.from(data, 'base64').toString('utf-8')
-}
 
 export function App() {
   const [view, setView] = useState<WalletView>('loading')
