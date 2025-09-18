@@ -5,27 +5,27 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { cn } from "@/lib/utils"
-import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowDownUp, ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, Coins, Copy, Loader2, Receipt, SendHorizontal, Wallet, Info, MessageSquare, XCircle } from 'lucide-react'
-import { useAccounts, useTransaction, useWallet } from 'mochimo-wallet'
-import { TagUtils } from 'mochimo-wots'
-import { useEffect, useState } from 'react'
-import { AccountAvatar } from '../ui/account-avatar'
-import {isValidMemo} from "mochimo-mesh-api-client"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { cn } from "@/lib/utils"
+import { log } from "@/lib/utils/logging"
+import { AnimatePresence, motion } from 'framer-motion'
+import { ArrowLeft, ArrowRight, CheckCircle2, ChevronDown, Copy, Info, Loader2, XCircle } from 'lucide-react'
+import { isValidMemo } from "mochimo-mesh-api-client"
+import { useAccounts, useTransaction, useWallet } from 'mochimo-wallet'
+import { TagUtils } from 'mochimo-wots'
+import { useEffect, useState } from 'react'
+import { AccountAvatar } from '../ui/account-avatar'
 
 interface SendModalProps {
   isOpen: boolean
   onClose: () => void
   onTransactionSent?: () => void // Callback when transaction is sent successfully
 }
-import { log } from "@/lib/utils/logging"
 const logger = log.getLogger("wallet-send");
 
 type Step = 'details' | 'confirm' | 'success'
@@ -82,9 +82,9 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const commandElement = document.getElementById('address-command')
-      if (showAddressCommand && 
-          commandElement && 
-          !commandElement.contains(event.target as Node)) {
+      if (showAddressCommand &&
+        commandElement &&
+        !commandElement.contains(event.target as Node)) {
         setShowAddressCommand(false)
       }
     }
@@ -98,16 +98,16 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
     if (!currentAccount?.balance) return "0"
     const balance = BigInt(currentAccount.balance)
     const feeAmount = BigInt(fee)
-    
+
     if (balance <= feeAmount) return "0"
-    
+
     // Calculate the maximum amount in nano MCM first
     const maxNano = balance - feeAmount
-    
+
     // Convert to MCM with proper decimal places
     const mcmWhole = maxNano / BigInt(1e9)
     const mcmDecimal = (maxNano % BigInt(1e9)).toString().padStart(9, '0')
-    
+
     return `${mcmWhole}.${mcmDecimal}`
   }
 
@@ -118,18 +118,18 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
 
   const validateAmount = (value: string) => {
     if (!value) return null
-    
+
     try {
       const amountBigInt = BigInt(Math.floor(parseFloat(value) * 1e9))
       const feeAmount = BigInt(fee)
       const total = amountBigInt + feeAmount
-      
+
       const balance = BigInt(currentAccount?.balance || '0')
-      
+
       if (total > balance) {
         return 'Insufficient balance for amount + fee'
       }
-      
+
       return null
     } catch (error) {
       return 'Invalid amount'
@@ -143,9 +143,9 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
 
   const validateMemo = (value: string) => {
     const trimmedValue = value.trim()
-    
+
     if (!trimmedValue) return null
-    
+
     if (!isValidMemo(trimmedValue)) {
       return 'Invalid memo format. Please refer to the memo format guidelines by hovering over the info icon.'
     }
@@ -155,7 +155,7 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
 
   const handleMemoBlur = (e: React.FocusEvent<HTMLInputElement>) => {
     const trimmedValue = e.target.value.trim()
-    
+
     if (trimmedValue !== e.target.value) {
       setMemo(trimmedValue)
     }
@@ -166,11 +166,11 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
 
   const validateDestination = (value: string) => {
     const trimmedValue = value.trim()
-    const isValidLength = trimmedValue.length>=22 && trimmedValue.length<=31
+    const isValidLength = trimmedValue.length >= 22 && trimmedValue.length <= 31
     if (!trimmedValue) {
       return 'Destination is required'
     }
-    
+
     if (!isValidLength) {
       return 'Tag must be between 22 and 31 characters'
     }
@@ -208,7 +208,7 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
       const amountBigInt = BigInt(Math.floor(parseFloat(amount) * 1e9))
       const feeAmount = BigInt(fee) // Use custom fee
       const total = amountBigInt + feeAmount
-      
+
       const balance = BigInt(currentAccount?.balance || '0')
       const change = balance - total
 
@@ -249,10 +249,10 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
       const recipientTagHex = Buffer.from(recipientTagBytes).toString('hex')
 
       const result = await tx.sendTransaction(
-        recipientTagHex, 
+        recipientTagHex,
         BigInt(transactionDetails!.amount),
         memo || undefined // Only include memo if it's not empty
-      ) 
+      )
 
       if (result) {
         await acc.updateAccount(acc.selectedAccount!, { wotsIndex: currAccount.wotsIndex + 1 })
@@ -300,7 +300,7 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
   }))
 
   const currentAccount = acc.accounts.find(a => a.tag === acc.selectedAccount)
-  const currentAccountBase58 = currentAccount 
+  const currentAccountBase58 = currentAccount
     ? TagUtils.addrTagToBase58(Buffer.from(currentAccount.tag, 'hex'))
     : null
 
@@ -554,138 +554,92 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="space-y-3"
+                  className="space-y-4"
                 >
-                  <div className="rounded-lg border bg-card p-3 space-y-3">
-                    {/* Transaction Direction */}
-                    <div className="space-y-3">
-                      {/* From Account */}
-                      <div className="flex items-start gap-2">
-                        <div className="h-8 w-8 shrink-0 rounded-full bg-muted/50 flex items-center justify-center">
-                          <Wallet className="h-4 w-4 text-muted-foreground" />
-                        </div>
-                        <div className="space-y-0.5 min-w-0">
-                          <Label className="text-muted-foreground text-xs">From</Label>
-                          <div className="flex items-center gap-2">
-                            <AccountAvatar
-                              name={currentAccount?.name || ''}
-                              tag={currentAccount?.tag || ''}
-                              emoji={currentAccount?.avatar}
-                              className="h-5 w-5"
-                              textClassName="text-xs"
-                            />
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm">
-                                {currentAccount?.name}
-                              </p>
-                              <p className="text-xs text-muted-foreground break-all">
-                                {currentAccountBase58}
-                              </p>
-                            </div>
+                  {/* Sender */}
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Sender</p>
+                    <div className="rounded-xl bg-muted/30 border border-border/40 p-4">
+                      <div className="flex items-center gap-3">
+                        <AccountAvatar
+                          name={currentAccount?.name || 'Account'}
+                          tag={currentAccount?.tag || ''}
+                          emoji={currentAccount?.avatar}
+                          className="h-8 w-8"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">{currentAccount?.name || 'Account'}</p>
+                          <div className="mt-0.5 flex items-center justify-between gap-2">
+                            <span className="text-xs font-mono text-muted-foreground truncate" title={currentAccountBase58 || ''}>{currentAccountBase58}</span>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => currentAccountBase58 && navigator.clipboard.writeText(currentAccountBase58)}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </div>
 
-                      {/* Arrow Icon */}
-                      <div className="flex justify-center py-0.5">
-                        <ArrowDownUp className="h-4 w-4 text-muted-foreground rotate-90" />
-                      </div>
-
-                      {/* To Account */}
-                      <div className="flex items-start gap-2">
-                        <div className="h-8 w-8 shrink-0 rounded-full bg-muted/50 flex items-center justify-center">
-                          <SendHorizontal className="h-4 w-4 text-muted-foreground" />
+                  {/* Recipient */}
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Recipient</p>
+                    <div className="rounded-xl bg-muted/30 border border-border/40 p-4">
+                      <div className="flex items-center gap-3">
+                        <AccountAvatar
+                          name={addressOptions.find(opt => opt.value === destination)?.label || 'Recipient'}
+                          tag={addressOptions.find(opt => opt.value === destination)?.tag || ''}
+                          emoji={addressOptions.find(opt => opt.value === destination)?.emoji}
+                          className="h-8 w-8"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium truncate">
+                            {addressOptions.find(opt => opt.value === destination)?.label || 'External Address'}
+                          </p>
+                          <div className="mt-0.5 flex items-center justify-between gap-2">
+                            <span className="text-xs font-mono text-muted-foreground truncate" title={destination}>{destination}</span>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => navigator.clipboard.writeText(destination)}>
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="space-y-0.5 min-w-0">
-                          <Label className="text-muted-foreground text-xs">To</Label>
-                          <div className="flex items-center gap-2">
-                            {addressOptions.find(opt => opt.value === destination) ? (
-                              <>
-                                <AccountAvatar
-                                  name={addressOptions.find(opt => opt.value === destination)!.label}
-                                  tag={addressOptions.find(opt => opt.value === destination)!.tag}
-                                  emoji={addressOptions.find(opt => opt.value === destination)!.emoji}
-                                  className="h-5 w-5"
-                                  textClassName="text-xs"
-                                />
-                                <div className="min-w-0">
-                                  <p className="font-medium text-sm">
-                                    {addressOptions.find(opt => opt.value === destination)!.label}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground break-all">
-                                    {destination}
-                                  </p>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="min-w-0">
-                                <p className="text-sm font-mono break-all">
-                                  {destination}
-                                </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Transaction Details */}
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-muted-foreground">Transaction Details</p>
+                    <div className="rounded-xl bg-muted/30 border border-border/40 p-4">
+                      <div className="space-y-3">
+                        <div className="flex items-center text-sm">
+                          <span className="text-sm">Amount</span>
+                          <span className="ml-auto font-mono tabular-nums">{formatBalance(transactionDetails?.amount.toString())} MCM</span>
+                        </div>
+                        <div className="h-px bg-border/40" />
+                        <div className="flex items-center text-sm">
+                          <span className="text-sm">Network Fee</span>
+                          <span className="ml-auto font-mono tabular-nums text-muted-foreground">{formatBalance(transactionDetails?.fee.toString())} MCM</span>
+                        </div>
+                        <div className="h-px bg-border/40" />
+                        <div className="flex items-center text-sm">
+                          <span className="text-sm">Total</span>
+                          <span className="ml-auto font-mono tabular-nums">{formatBalance(transactionDetails?.total.toString())} MCM</span>
+                        </div>
+                        <div className="flex items-center text-sm">
+                          <span className="text-sm">Remaining</span>
+                          <span className="ml-auto font-mono tabular-nums text-muted-foreground">{formatBalance(transactionDetails?.change.toString())} MCM</span>
+                        </div>
+                        {memo && (
+                          <>
+                            <div className="h-px bg-border/40" />
+                            <div className="flex items-center text-sm">
+                              <span className="text-sm">Memo</span>
+                              <span className="ml-auto font-mono tabular-nums">{memo}</span>
                               </div>
-                            )}
-                          </div>
-                        </div>
+                          </>
+                        )}
                       </div>
                     </div>
-
-                    <div className="h-px bg-border" />
-
-                    {/* Transaction Details */}
-                    <div className="space-y-3">
-                      {/* Amount */}
-                      <div className="flex items-center gap-2">
-                        <Coins className="h-5 w-5 text-muted-foreground" />
-                        <span>Amount</span>
-                        <span className="ml-auto text-sm font-mono">
-                          {formatBalance(transactionDetails?.amount.toString())} MCM
-                        </span>
-                      </div>
-
-                      {/* Network Fee */}
-                      <div className="flex items-center gap-2">
-                        <Receipt className="h-5 w-5 text-muted-foreground" />
-                        <span>Network Fee</span>
-                        <span className="ml-auto text-sm font-mono">
-                          {formatBalance(transactionDetails?.fee.toString())} MCM
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="h-px bg-border" />
-
-                    {/* Totals */}
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 font-medium">
-                        <span>Total Amount</span>
-                        <span className="ml-auto text-sm font-mono">
-                          {formatBalance(transactionDetails?.total.toString())} MCM
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <span>Remaining Balance</span>
-                        <span className="ml-auto text-sm font-mono">
-                          {formatBalance(transactionDetails?.change.toString())} MCM
-                        </span>
-                      </div>
-                    </div>
-
-                    {memo && (
-                      <>
-                        <div className="h-px bg-border" />
-                        <div className="flex items-start gap-2">
-                          <div className="h-8 w-8 shrink-0 rounded-full bg-muted/50 flex items-center justify-center">
-                            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                          </div>
-                          <div className="space-y-0.5">
-                            <Label className="text-muted-foreground text-xs">Memo</Label>
-                            <p className="text-base break-words">
-                              {memo}
-                            </p>
-                          </div>
-                        </div>
-                      </>
-                    )}
                   </div>
                 </motion.div>
               )}
@@ -745,7 +699,7 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
             >
               Cancel
             </Button>
-            
+
             {step === 'details' && (
               <Button
                 onClick={handleNext}
