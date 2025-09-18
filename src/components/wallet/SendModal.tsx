@@ -342,9 +342,12 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
                   exit={{ opacity: 0, y: -20 }}
                   className="space-y-6"
                 >
-                  {/* From Account Card */}
-                  <div className="rounded-lg border bg-muted/30 p-4">
-                    <div className="flex items-center gap-3 mb-3">
+                  {/* Sender */}
+                  <div className="space-y-1">
+
+                  <p className="text-sm font-medium text-muted-foreground leading-none mb-0">Sender</p>
+                  <div className="rounded-xl bg-muted/30 border border-border/40 p-4">
+                    <div className="flex items-center gap-3 mb-2">
                       {currentAccount && (
                         <AccountAvatar
                           name={currentAccount.name}
@@ -355,7 +358,7 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
                       )}
                       <div className="flex flex-col">
                         <span className="text-sm font-medium">
-                          From: {currentAccount?.name}
+                          {currentAccount?.name}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {currentAccountBase58?.slice(0, 8)}...{currentAccountBase58?.slice(-8)}
@@ -367,12 +370,13 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
                       <span className="font-mono">
                         {formatBalance(currentAccount?.balance || '0')} MCM
                       </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Destination field */}
-                  <div className="space-y-2">
-                    <Label>Destination</Label>
+                  {/* Recipient field */}
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-muted-foreground">Recipient</Label>
                     <AddressInput
                       value={destination}
                       onChange={(value) => {
@@ -400,8 +404,8 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
                   </div>
 
                   {/* Amount field */}
-                  <div className="space-y-2">
-                    <Label>Amount (MCM)</Label>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-muted-foreground">Amount (MCM)</Label>
                     <AmountInput
                       type="number"
                       value={amount}
@@ -424,9 +428,9 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
                   </div>
 
                   {/* Memo field */}
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <Label>Memo</Label>
+                      <Label className="text-sm font-medium text-muted-foreground">Memo</Label>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -529,7 +533,7 @@ export function SendModal({ isOpen, onClose, onTransactionSent }: SendModalProps
                     </CollapsibleTrigger>
                     <CollapsibleContent className="space-y-4">
                       <div className="space-y-2">
-                        <Label>
+                        <Label className="text-sm font-medium text-muted-foreground">
                           Network Fee (nano MCM)
                           <span className="text-xs text-muted-foreground ml-2">
                             Default: 500
