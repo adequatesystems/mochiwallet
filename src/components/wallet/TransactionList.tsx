@@ -166,17 +166,14 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
       let color = 'text-gray-500'
       let Icon: any = AlertCircle
 
-      if (pending) {
-        bg = 'bg-yellow-500/10'; color = 'text-yellow-600'; Icon = Clock
-      } else {
-        switch (type) {
-          case 'send':
-            bg = 'bg-red-500/10'; color = 'text-red-600'; Icon = ArrowUpRight; break
-          case 'receive':
-            bg = 'bg-green-500/10'; color = 'text-green-600'; Icon = ArrowDownLeft; break
-          case 'mining':
-            bg = 'bg-blue-500/10'; color = 'text-blue-600'; Icon = CheckCircle; break
-        }
+      // Always show transaction type icon in main avatar, regardless of pending status
+      switch (type) {
+        case 'send':
+          bg = 'bg-red-500/10'; color = 'text-red-600'; Icon = ArrowUpRight; break
+        case 'receive':
+          bg = 'bg-green-500/10'; color = 'text-green-600'; Icon = ArrowDownLeft; break
+        case 'mining':
+          bg = 'bg-blue-500/10'; color = 'text-blue-600'; Icon = CheckCircle; break
       }
 
       return (
