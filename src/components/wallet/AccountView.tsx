@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Drawer, DrawerContent } from '@/components/ui/drawer'
+import { LiquidButton } from '@/components/ui/shadcn-io/liquid-button'
 import { motion } from 'framer-motion'
 import {
   AlertTriangle,
@@ -334,7 +335,7 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
           </motion.div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <Tooltip>
               <TooltipTrigger asChild>
                 <motion.div
@@ -342,33 +343,15 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2 }}
                 >
-                  <Button
-                    size="lg"
+                  <LiquidButton
+                    variant="outline"
+                    size="default"
+                    className="w-full h-16 rounded-lg"
                     onClick={() => setSendModalOpen(true)}
-                    // disabled={!isActivated}
-                    className={cn(
-                      "w-full h-24 relative overflow-hidden group",
-                      isActivated
-                        ? "bg-primary/10 hover:bg-primary/20 text-primary border-2 border-primary/20"
-                        : "bg-muted border-2 border-muted"
-                    )}
                   >
-                    <motion.div
-                      className="flex flex-col items-center gap-2 relative z-10"
-                      whileHover={{ y: -5 }}
-                    >
-                      <Send className={cn(
-                        "h-6 w-6",
-                        isActivated ? "text-primary" : "text-muted-foreground"
-                      )} />
-                      <span className="font-semibold">Send</span>
-                    </motion.div>
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                      initial={false}
-                      whileHover={{ scale: 1.5, rotate: 45 }}
-                    />
-                  </Button>
+                    <Send className="h-5 w-5" />
+                    <span className="font-medium text-sm">Send</span>
+                  </LiquidButton>
                 </motion.div>
               </TooltipTrigger>
               <TooltipContent>
@@ -386,25 +369,15 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <Button
-                    size="lg"
+                  <LiquidButton
                     variant="outline"
-                    className="w-full h-24 relative overflow-hidden group"
+                    size="default"
+                    className="w-full h-16 rounded-lg"
                     onClick={() => setReceiveModalOpen(true)}
                   >
-                    <motion.div
-                      className="flex flex-col items-center gap-2 relative z-10"
-                      whileHover={{ y: -5 }}
-                    >
-                      <QrCode className="h-6 w-6" />
-                      <span className="font-semibold">Receive</span>
-                    </motion.div>
-                    <motion.div
-                      className="absolute inset-0 bg-muted/50 opacity-0 group-hover:opacity-100 transition-opacity"
-                      initial={false}
-                      whileHover={{ scale: 1.5, rotate: 45 }}
-                    />
-                  </Button>
+                    <QrCode className="h-5 w-5" />
+                    <span className="font-medium text-sm">Receive</span>
+                  </LiquidButton>
                 </motion.div>
               </TooltipTrigger>
               <TooltipContent>
