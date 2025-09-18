@@ -327,12 +327,38 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
   }
 
   if (displayIsLoading && displayTransactions.length === 0) {
+    // Show skeleton list instead of spinner
     return (
-      <div className={cn("flex items-center justify-center py-8", className)}>
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Loading transactions...</p>
-        </div>
+      <div className={cn("space-y-2", className)}>
+        {Array.from({ length: 5 }).map((_, index) => (
+          <div key={index} className="bg-card border border-border/50 rounded-lg overflow-hidden">
+            <div className="px-3 py-2">
+              <div className="flex gap-3">
+                {/* Avatar skeleton */}
+                <div className="flex-shrink-0 mt-1">
+                  <div className="h-8 w-8 rounded-full bg-muted animate-pulse" />
+                </div>
+                {/* Content skeleton */}
+                <div className="flex-1 min-w-0">
+                  {/* Line 1: Title + Button */}
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="h-4 w-16 bg-muted rounded animate-pulse" />
+                    <div className="h-6 w-6 bg-muted rounded animate-pulse" />
+                  </div>
+                  {/* Line 2: Amount */}
+                  <div className="mb-1">
+                    <div className="h-5 w-24 bg-muted rounded animate-pulse" />
+                  </div>
+                  {/* Line 3: Address + Date */}
+                  <div className="flex items-center justify-between">
+                    <div className="h-3 w-32 bg-muted rounded animate-pulse" />
+                    <div className="h-3 w-16 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     )
   }

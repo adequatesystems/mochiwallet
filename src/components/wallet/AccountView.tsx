@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { Account, MasterSeed, NetworkProvider, useAccounts, useNetwork, useWallet } from 'mochimo-wallet'
 
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Tooltip,
   TooltipContent,
@@ -39,7 +40,8 @@ interface AccountViewProps {
 
 export function AccountView({ account, onUpdate }: AccountViewProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
+  const [balanceRefreshing, setBalanceRefreshing] = useState(false)
+  const [activityRefreshing, setActivityRefreshing] = useState(false)
   const [isActivated, setIsActivated] = useState<boolean | null>(null)
   const [checkingActivation, setCheckingActivation] = useState(false)
   const [activating, setActivating] = useState(false)
@@ -124,10 +126,10 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
 
   // Handle refresh
   const handleRefresh = async () => {
-    if(refreshing) return;
-    setRefreshing(true)
+    if (balanceRefreshing) return;
+    setBalanceRefreshing(true)
     checkActivation().finally(() => {
-      setRefreshing(false)
+      setBalanceRefreshing(false)
     })
   }
   const network = useNetwork()
@@ -135,9 +137,9 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
 
   useEffect(() => {
     //when block height changes, check if the account needs to update its wots index.
-    setRefreshing(true)
+    setBalanceRefreshing(true)
     checkActivation().finally(() => {
-      setRefreshing(false)
+      setBalanceRefreshing(false)
     })
   }, [network.blockHeight, account.tag])
 
@@ -202,16 +204,16 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
                     size="icon"
                     onClick={handleRefresh}
                     className="h-9 w-9"
-                    disabled={refreshing}
+                    disabled={balanceRefreshing}
                   >
                     <RefreshCcw className={cn(
                       "h-4 w-4",
-                      refreshing && "animate-spin"
+                      balanceRefreshing && "animate-spin"
                     )} />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {refreshing ? 'Refreshing...' : 'Refresh Account'}
+                  {balanceRefreshing ? 'Refreshing...' : 'Refresh Account'}
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -310,14 +312,21 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
                   className="flex flex-col"
                 >
                   <div className="flex items-baseline gap-2">
-                    <div className="font-mono">
-                      <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-                        {formatBalance(account.balance||'0')}
-                      </span>
-                      <span className="ml-2 text-xl text-muted-foreground font-medium">
-                        MCM
-                      </span>
-                    </div>
+                    {net.isConnected ? (
+                      <div className="font-mono">
+                        <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                          {formatBalance(account.balance||'0')}
+                        </span>
+                        <span className="ml-2 text-xl text-muted-foreground font-medium">
+                          MCM
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-7 w-40" />
+                        <Skeleton className="h-5 w-10" />
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               </div>
@@ -420,21 +429,21 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={refreshing}
+                  disabled={activityRefreshing}
                   onClick={async () => {
                     if (!transactionListRef.current) return
                     try {
-                      setRefreshing(true)
+                      setActivityRefreshing(true)
                       await transactionListRef.current.refresh()
                     } catch (e) {
                       // no-op: optionally toast error here
                     } finally {
-                      setRefreshing(false)
+                      setActivityRefreshing(false)
                     }
                   }}
                   className="h-8 w-8 p-0"
                 >
-                  <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+                  <RefreshCw className={cn("h-4 w-4", activityRefreshing && "animate-spin")} />
                 </Button>
                 <Button
                   variant="outline"
