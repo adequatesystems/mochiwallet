@@ -50,11 +50,12 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
       stats
     } = useAccountActivity(account)
 
+    // Transaction polling is now handled by useNetworkSync - no need for separate monitoring
+
     // For infinite scroll, we'll use the account-specific data with a higher limit
     const infiniteTransactions = transactions
     const infiniteLoading = isLoading
     const infiniteHasMore = hasMore
-    const infiniteLoadMore = loadMoreAccountActivity
 
     const { accounts } = useAccounts()
 

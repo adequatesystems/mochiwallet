@@ -47,7 +47,7 @@
     "loglevel": "1.9.2",
     "lucide-react": "0.468.0",
     "mochimo-mesh-api-client": "github:adequatesystems/mochimo-mesh-api-client#v1.0.5-dev",
-    "mochimo-wallet": "github:adequatesystems/mochimo-wallet#v1.1.53-dev",
+    "mochimo-wallet": "github:adequatesystems/mochimo-wallet#v1.1.54-dev",
     "mochimo-wots": "github:adequatesystems/mochimo-wots#v1.2.8",
     "motion": "12.23.14",
     "process": "0.11.10",

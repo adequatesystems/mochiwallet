@@ -15,9 +15,9 @@ import {
   Tag as TagIcon,
   Wallet
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { Account, MasterSeed, NetworkProvider, useAccounts, useNetwork, useWallet } from 'mochimo-wallet'
+import { Account, MasterSeed, NetworkProvider, useAccountActivity, useAccounts, useNetwork, useWallet } from 'mochimo-wallet'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -42,7 +42,7 @@ interface AccountViewProps {
 export function AccountView({ account, onUpdate }: AccountViewProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [balanceRefreshing, setBalanceRefreshing] = useState(false)
-  const [activityRefreshing, setActivityRefreshing] = useState(false)
+  const [transactionPolling, setTransactionPolling] = useState(false)
   const [isActivated, setIsActivated] = useState<boolean | null>(null)
   const [checkingActivation, setCheckingActivation] = useState(false)
   const [activating, setActivating] = useState(false)
@@ -54,10 +54,31 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
   const [showAllTransactions, setShowAllTransactions] = useState(false)
   
   const transactionListRef = useRef<TransactionListRef>(null)
+  const isRefreshingRef = useRef(false)
 
   const w = useWallet()
   const ac = useAccounts()
   const net = useNetwork()
+  
+  // Get account activity data for polling
+  const { pendingTransactions } = useAccountActivity(account)
+
+  // Safe refresh function that prevents conflicts
+  const safeRefresh = useCallback(async () => {
+    if (!transactionListRef.current || isRefreshingRef.current) {
+      console.log('Refresh skipped - already in progress or no ref')
+      return
+    }
+
+    try {
+      isRefreshingRef.current = true
+      await transactionListRef.current.refresh()
+    } catch (error) {
+      console.error('Failed to refresh transactions:', error)
+    } finally {
+      isRefreshingRef.current = false
+    }
+  }, [])
 
 
   // Check activation status on mount and refresh
@@ -143,6 +164,27 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
       setBalanceRefreshing(false)
     })
   }, [network.blockHeight, account.tag])
+
+  // Transaction polling - triggered by block height changes
+  useEffect(() => {
+    // Only refresh if there are pending transactions or on initial mount
+    if (pendingTransactions.length > 0 || network.blockHeight === 0) {
+      logger.info(`Block height changed to ${network.blockHeight}, refreshing transactions for account ${account.tag}`)
+      
+      const refreshTransactions = async () => {
+        try {
+          setTransactionPolling(true)
+          await safeRefresh()
+        } catch (error) {
+          console.error('Failed to refresh transactions on block update:', error)
+        } finally {
+          setTransactionPolling(false)
+        }
+      }
+
+      refreshTransactions()
+    }
+  }, [network.blockHeight, account.tag, pendingTransactions.length, safeRefresh])
 
   const tag = useMemo(() => {
     return TagUtils.addrTagToBase58(Buffer.from(account.tag, 'hex'))
@@ -399,25 +441,12 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
                 <h3 className="font-semibold text-foreground">Recent Activity</h3>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={activityRefreshing}
-                  onClick={async () => {
-                    if (!transactionListRef.current) return
-                    try {
-                      setActivityRefreshing(true)
-                      await transactionListRef.current.refresh()
-                    } catch (e) {
-                      // no-op: optionally toast error here
-                    } finally {
-                      setActivityRefreshing(false)
-                    }
-                  }}
-                  className="h-8 w-8 p-0"
-                >
-                  <RefreshCw className={cn("h-4 w-4", activityRefreshing && "animate-spin")} />
-                </Button>
+                {/* Syncing indicator */}
+                {transactionPolling && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  </div>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -440,9 +469,7 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
         onClose={() => setSendModalOpen(false)}
         onTransactionSent={() => {
           // Refresh the transaction list when a transaction is sent
-          if (transactionListRef.current) {
-            transactionListRef.current.refresh()
-          }
+          safeRefresh()
         }}
       />
 
