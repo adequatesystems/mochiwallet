@@ -89,6 +89,7 @@ export function UnlockWallet({ onUnlock }: UnlockWalletProps) {
               }}
               onKeyPress={handleKeyPress}
               disabled={loading}
+              autoFocus
               className={cn(
                 'pr-10',
                 error && 'border-red-500 focus-visible:ring-red-500'
