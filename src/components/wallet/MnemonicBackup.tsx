@@ -37,7 +37,7 @@ export function MnemonicBackup({ mnemonic, onComplete, onBack, onRefreshMnemonic
         }
         setVerificationWords(indices.map(index => ({
             index,
-            word: words[index]
+            word: '',
         })))
         setInputs(indices.map(() =>''))
     }, [mnemonic])
