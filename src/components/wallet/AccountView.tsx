@@ -488,16 +488,8 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
       {/* Full Transaction View Drawer */}
       <Drawer open={showAllTransactions} onOpenChange={setShowAllTransactions}>
         <DrawerContent className="p-0 h-[100dvh] flex flex-col overflow-hidden rounded-none">
-          <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center justify-between p-4 border-b pr-12">
             <h2 className="text-xl font-semibold">All Transactions</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowAllTransactions(false)}
-              className="h-8 w-8 p-0"
-            >
-              ×
-            </Button>
           </div>
           
           <div className="flex-1 overflow-y-auto p-4 min-h-0">

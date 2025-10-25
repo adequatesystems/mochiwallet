@@ -1,14 +1,13 @@
-import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { AnimatePresence, motion } from 'framer-motion'
-import { AlertTriangle, Copy, Eye, EyeOff, CheckCircle2, ArrowRight, ArrowLeft, RefreshCw } from 'lucide-react'
 import {
     Tooltip,
     TooltipContent,
-    TooltipTrigger,
-    TooltipProvider
+    TooltipTrigger
 } from '@/components/ui/tooltip'
+import { AnimatePresence, motion } from 'framer-motion'
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Copy, Eye, RefreshCw } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 interface MnemonicBackupProps {
     mnemonic: string
@@ -37,7 +36,7 @@ export function MnemonicBackup({ mnemonic, onComplete, onBack, onRefreshMnemonic
         }
         setVerificationWords(indices.map(index => ({
             index,
-            word: '',
+            word: words[index], // Store the actual word, not empty string
         })))
         setInputs(indices.map(() =>''))
     }, [mnemonic])
@@ -49,6 +48,12 @@ export function MnemonicBackup({ mnemonic, onComplete, onBack, onRefreshMnemonic
     }
 
     const handleVerify = () => {
+        // Safety check: ensure verification words are loaded
+        if (verificationWords.length === 0) {
+            setError('Verification words not loaded. Please try again.')
+            return
+        }
+
         const isCorrect = verificationWords.every((vw, i) =>
             inputs[i].toLowerCase().trim() === vw.word.toLowerCase()
         )
@@ -128,23 +133,29 @@ export function MnemonicBackup({ mnemonic, onComplete, onBack, onRefreshMnemonic
                             </p>
 
                             <div className="space-y-3">
-                                {verificationWords.map((vw, i) => (
-                                    <div key={i} className="space-y-1">
-                                        <label className="text-sm font-medium">
-                                            Word #{vw.index + 1}
-                                        </label>
-                                        <Input
-                                            value={inputs[i]}
-                                            onChange={(e) => {
-                                                const newInputs = [...inputs]
-                                                newInputs[i] = e.target.value
-                                                setInputs(newInputs)
-                                                setError(null)
-                                            }}
-                                            placeholder={`Enter word #${vw.index + 1}`}
-                                        />
-                                    </div>
-                                ))}
+                                {verificationWords.length === 0 ? (
+                                    <p className="text-sm text-muted-foreground text-center py-4">
+                                        Loading verification words...
+                                    </p>
+                                ) : (
+                                    verificationWords.map((vw, i) => (
+                                        <div key={i} className="space-y-1">
+                                            <label className="text-sm font-medium">
+                                                Word #{vw.index + 1}
+                                            </label>
+                                            <Input
+                                                value={inputs[i]}
+                                                onChange={(e) => {
+                                                    const newInputs = [...inputs]
+                                                    newInputs[i] = e.target.value
+                                                    setInputs(newInputs)
+                                                    setError(null)
+                                                }}
+                                                placeholder={`Enter word #${vw.index + 1}`}
+                                            />
+                                        </div>
+                                    ))
+                                )}
 
                                 {error && (
                                     <p className="text-sm text-red-500">
@@ -206,13 +217,24 @@ export function MnemonicBackup({ mnemonic, onComplete, onBack, onRefreshMnemonic
                         </Button>
                     </div>
                 ) : (
-                    <Button
-                        onClick={handleVerify}
-                        disabled={inputs.some(input => !input.trim())}
-                        className="w-full"
-                    >
-                        Complete Backup
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setStep('show')}
+                            className="flex-1"
+                        >
+                            <ArrowLeft className="h-4 w-4 mr-2" />
+                            Back to Words
+                        </Button>
+                        <Button
+                            onClick={handleVerify}
+                            disabled={verificationWords.length === 0 || inputs.some(input => !input.trim())}
+                            className="flex-1"
+                        >
+                            Complete Backup
+                        </Button>
+                    </div>
                 )}
             </div>
         </div>

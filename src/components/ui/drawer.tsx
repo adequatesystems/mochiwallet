@@ -1,12 +1,17 @@
 import { cn } from "@/lib/utils"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
+import { X } from "lucide-react"
 import * as React from "react"
 
 export const Drawer = DialogPrimitive.Root
 export const DrawerTrigger = DialogPrimitive.Trigger
 export const DrawerClose = DialogPrimitive.Close
 
-export function DrawerContent({ className, ...props }: DialogPrimitive.DialogContentProps) {
+interface DrawerContentProps extends DialogPrimitive.DialogContentProps {
+  showClose?: boolean
+}
+
+export function DrawerContent({ className, children, showClose = true, ...props }: DrawerContentProps) {
   return (
     <DialogPrimitive.Portal>
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
@@ -18,7 +23,15 @@ export function DrawerContent({ className, ...props }: DialogPrimitive.DialogCon
           className
         )}
         {...props}
-      />
+      >
+        {children}
+        {showClose && (
+          <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        )}
+      </DialogPrimitive.Content>
     </DialogPrimitive.Portal>
   )
 }

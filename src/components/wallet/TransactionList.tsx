@@ -513,16 +513,8 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
               return (
                 <div className="flex flex-col h-full min-h-0">
                   {/* Header */}
-                  <div className="flex items-center justify-between p-4 border-b">
+                  <div className="flex items-center justify-between p-4 border-b pr-12">
                     <h2 className="text-lg font-semibold">{getTitle(tx.type, tx.pending)}</h2>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setDrawerTxId(null)}
-                      className="h-8 w-8 p-0"
-                    >
-                      ×
-                    </Button>
                   </div>
 
                   {/* Main Content */}
