@@ -334,7 +334,7 @@ export function McmImportDialog({
             <div
               key={`${account.address}-${account.originalIndex}`}
               className={cn(
-                "flex items-start gap-3 p-4",
+                "flex items-start gap-3 p-4 w-full min-w-0",
                 account.validation?.isValid && "cursor-pointer hover:bg-secondary/50",
                 selectedAccounts.has(account.originalIndex) && "bg-primary/10",
                 !account.validation?.isValid && "opacity-75"
@@ -346,7 +346,7 @@ export function McmImportDialog({
                 }
               }}
             >
-              <div className="pt-1">
+              <div className="pt-1 flex-shrink-0">
                 {account.validation?.isValid && (
                   <div className={cn(
                     "w-5 h-5 rounded-full border-2 flex items-center justify-center",
@@ -361,9 +361,9 @@ export function McmImportDialog({
                 )}
               </div>
 
-              <div className="flex-1 min-w-0 space-y-3">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="flex-1 min-w-0 space-y-3 overflow-hidden">
+                <div className="flex items-center justify-between gap-2 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                     <Wallet className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <p className="font-medium truncate">
                       {account.name || 'NO NAME'}
@@ -374,9 +374,9 @@ export function McmImportDialog({
                   </div>
                 </div>
 
-                <div className="space-y-2 text-xs">
+                <div className="space-y-2 text-xs overflow-hidden">
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="flex items-center gap-1.5 text-muted-foreground min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 text-muted-foreground min-w-0 flex-1 overflow-hidden">
                       <Tag className="h-3.5 w-3.5 flex-shrink-0" />
                       <span className="font-mono truncate">{account.tag}</span>
                     </div>
@@ -394,7 +394,7 @@ export function McmImportDialog({
                   </div>
 
                   {account.validation?.networkBalance && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground min-w-0">
+                    <div className="flex items-center gap-1.5 text-muted-foreground min-w-0 overflow-hidden">
                       <Coins className="h-3.5 w-3.5 flex-shrink-0" />
                       <span className="font-mono truncate">
                         {formatBalance(account.validation.networkBalance)} MCM
