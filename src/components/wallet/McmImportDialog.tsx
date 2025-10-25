@@ -1,16 +1,17 @@
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { Upload, Lock, CheckCircle2, AlertCircle, AlertTriangle, Loader2, Tag, User, Coins, Copy, Wallet } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { log } from "@/lib/utils/logging"
-import { AnimatePresence, motion } from 'framer-motion'
-import { AlertCircle, AlertTriangle, CheckCircle2, Coins, Copy, Loader2, Lock, Tag, Upload, Wallet } from 'lucide-react'
-import { DecodeResult, MCMDecoder, NetworkProvider, useAccounts, WOTSEntry } from 'mochimo-wallet'
+import { DecodeResult, MCMDecoder, NetworkProvider, WOTSEntry } from 'mochimo-wallet'
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip'
+import { Badge } from '@/components/ui/badge'
+import { useAccounts } from 'mochimo-wallet'
 import { WotsAddress } from 'mochimo-wots'
-import { useEffect, useState } from 'react'
+import { log } from "@/lib/utils/logging"
 const logger = log.getLogger("wallet-modal");
 
 interface AccountValidation {
@@ -329,12 +330,12 @@ export function McmImportDialog({
           </p>
         </div>
       ) : (
-        <div className="border rounded-lg divide-y max-h-[320px] overflow-y-auto overflow-x-hidden bg-card">
+        <div className="border rounded-lg divide-y max-h-[320px] overflow-y-auto bg-card">
           {accounts.map((account, index) => (
             <div
               key={`${account.address}-${account.originalIndex}`}
               className={cn(
-                "flex items-start gap-3 p-4 w-full min-w-0",
+                "flex items-start gap-3 p-4",
                 account.validation?.isValid && "cursor-pointer hover:bg-secondary/50",
                 selectedAccounts.has(account.originalIndex) && "bg-primary/10",
                 !account.validation?.isValid && "opacity-75"
@@ -346,7 +347,7 @@ export function McmImportDialog({
                 }
               }}
             >
-              <div className="pt-1 flex-shrink-0">
+              <div className="pt-1">
                 {account.validation?.isValid && (
                   <div className={cn(
                     "w-5 h-5 rounded-full border-2 flex items-center justify-center",
@@ -361,29 +362,27 @@ export function McmImportDialog({
                 )}
               </div>
 
-              <div className="flex-1 min-w-0 space-y-3 overflow-hidden">
-                <div className="flex items-center justify-between gap-2 min-w-0">
-                  <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
-                    <Wallet className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                    <p className="font-medium truncate">
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Wallet className="h-4 w-4 text-muted-foreground" />
+                    <p className="font-medium">
                       {account.name || 'NO NAME'}
                     </p>
                   </div>
-                  <div className="flex-shrink-0">
-                    {getStatusBadge(account.validation)}
-                  </div>
+                  {getStatusBadge(account.validation)}
                 </div>
 
-                <div className="space-y-2 text-xs overflow-hidden">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="flex items-center gap-1.5 text-muted-foreground min-w-0 flex-1 overflow-hidden">
-                      <Tag className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="font-mono truncate">{account.tag}</span>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Tag className="h-3.5 w-3.5" />
+                      <span className="font-mono">{account.tag}</span>
                     </div>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-5 w-5 text-muted-foreground hover:text-foreground flex-shrink-0"
+                      className="h-5 w-5 text-muted-foreground hover:text-foreground"
                       onClick={(e) => {
                         e.stopPropagation()
                         navigator.clipboard.writeText(account.tag)
@@ -394,9 +393,9 @@ export function McmImportDialog({
                   </div>
 
                   {account.validation?.networkBalance && (
-                    <div className="flex items-center gap-1.5 text-muted-foreground min-w-0 overflow-hidden">
-                      <Coins className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="font-mono truncate">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Coins className="h-3.5 w-3.5" />
+                      <span className="font-mono">
                         {formatBalance(account.validation.networkBalance)} MCM
                       </span>
                     </div>
@@ -420,7 +419,7 @@ export function McmImportDialog({
   return (
     <TooltipProvider>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-[420px] p-4">
+        <DialogContent className="max-w-[340px] p-4">
           <DialogHeader>
             <DialogTitle>Import MCM Wallet</DialogTitle>
           </DialogHeader>
