@@ -96,11 +96,11 @@ importers:
         specifier: 0.468.0
         version: 0.468.0(react@18.3.1)
       mochimo-mesh-api-client:
-        specifier: github:adequatesystems/mochimo-mesh-api-client#v1.0.5-dev
-        version: https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/6aba0f3720ef5c1229a85ffb7fa024a8a6b7fdeb(crypto-js@4.2.0)(mochimo-wots@https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910)
+        specifier: github:adequatesystems/mochimo-mesh-api-client#v1.0.5
+        version: https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/66d511e538876b0ffce0d4a913b667bb463c8367(crypto-js@4.2.0)(mochimo-wots@https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910)
       mochimo-wallet:
-        specifier: github:adequatesystems/mochimo-wallet#v1.1.54-dev
-        version: https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/6ab219c3e4e16e918a4435515c295b70b0c6d675(@types/react@18.3.12)(immer@10.1.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(redux@5.0.1)
+        specifier: github:adequatesystems/mochimo-wallet#v1.1.54
+        version: https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/f4694cefd3fc4f15a9922db0bb2ca1c0f27ecb60(@types/react@18.3.12)(immer@10.1.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(redux@5.0.1)
       mochimo-wots:
         specifier: github:adequatesystems/mochimo-wots#v1.2.8
         version: https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910
@@ -2814,15 +2814,15 @@ packages:
     resolution: {integrity: sha512-qOOzS1cBTWYF4BH8fVePDBOO9iptMnGUEZwNc/cMWnTV2nVLZ7VoNWEPHkYczZA0pdoA7dl6e7FL659nX9S2aw==}
     engines: {node: '>=16 || 14 >=14.17'}
 
-  mochimo-mesh-api-client@https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/6aba0f3720ef5c1229a85ffb7fa024a8a6b7fdeb:
-    resolution: {tarball: https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/6aba0f3720ef5c1229a85ffb7fa024a8a6b7fdeb}
+  mochimo-mesh-api-client@https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/66d511e538876b0ffce0d4a913b667bb463c8367:
+    resolution: {tarball: https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/66d511e538876b0ffce0d4a913b667bb463c8367}
     version: 1.0.5
     peerDependencies:
       crypto-js: ^4.2.0
       mochimo-wots: ^1.2.1
 
-  mochimo-wallet@https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/6ab219c3e4e16e918a4435515c295b70b0c6d675:
-    resolution: {tarball: https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/6ab219c3e4e16e918a4435515c295b70b0c6d675}
+  mochimo-wallet@https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/f4694cefd3fc4f15a9922db0bb2ca1c0f27ecb60:
+    resolution: {tarball: https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/f4694cefd3fc4f15a9922db0bb2ca1c0f27ecb60}
     version: 1.1.54
     peerDependencies:
       react: ^18.2.0
@@ -6552,17 +6552,17 @@ snapshots:
 
   minipass@7.1.2: {}
 
-  mochimo-mesh-api-client@https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/6aba0f3720ef5c1229a85ffb7fa024a8a6b7fdeb(crypto-js@4.2.0)(mochimo-wots@https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910):
+  mochimo-mesh-api-client@https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/66d511e538876b0ffce0d4a913b667bb463c8367(crypto-js@4.2.0)(mochimo-wots@https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910):
     dependencies:
       crypto-js: 4.2.0
       mochimo-wots: https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910
 
-  mochimo-wallet@https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/6ab219c3e4e16e918a4435515c295b70b0c6d675(@types/react@18.3.12)(immer@10.1.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(redux@5.0.1):
+  mochimo-wallet@https://codeload.github.com/adequatesystems/mochimo-wallet/tar.gz/f4694cefd3fc4f15a9922db0bb2ca1c0f27ecb60(@types/react@18.3.12)(immer@10.1.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(redux@5.0.1):
     dependencies:
       '@reduxjs/toolkit': 2.5.0(react-redux@9.2.0(@types/react@18.3.12)(react@18.3.1)(redux@5.0.1))(react@18.3.1)
       '@scure/bip39': 1.5.0
       crypto-js: 4.2.0
-      mochimo-mesh-api-client: https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/6aba0f3720ef5c1229a85ffb7fa024a8a6b7fdeb(crypto-js@4.2.0)(mochimo-wots@https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910)
+      mochimo-mesh-api-client: https://codeload.github.com/adequatesystems/mochimo-mesh-api-client/tar.gz/66d511e538876b0ffce0d4a913b667bb463c8367(crypto-js@4.2.0)(mochimo-wots@https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910)
       mochimo-wots: https://codeload.github.com/adequatesystems/mochimo-wots/tar.gz/59c06c7e2697f4d7c4482343444b644f0e237910
       node-forge: 1.3.1
       pako: 2.1.0
