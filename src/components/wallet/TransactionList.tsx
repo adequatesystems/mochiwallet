@@ -6,14 +6,14 @@ import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  AlertCircle,
-  ArrowDownLeft,
-  ArrowUpRight,
-  CheckCircle,
-  Clock,
-  Copy,
-  ExternalLink,
-  Loader2
+    AlertCircle,
+    ArrowDownLeft,
+    ArrowUpRight,
+    CheckCircle,
+    Clock,
+    Copy,
+    ExternalLink,
+    Loader2
 } from 'lucide-react'
 import { useAccountActivity, useAccounts } from 'mochimo-wallet'
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
@@ -245,16 +245,29 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
       )
     }
 
-    const getTitle = (type: string) => {
-      switch (type) {
-        case 'send':
-          return 'Sent'
-        case 'receive':
-          return 'Received'
-        case 'mining':
-          return 'Mining Reward'
-        default:
-          return 'Activity'
+    const getTitle = (type: string, pending: boolean = false) => {
+      if (pending) {
+        switch (type) {
+          case 'send':
+            return 'Sending'
+          case 'receive':
+            return 'Receiving'
+          case 'mining':
+            return 'Mining'
+          default:
+            return 'Processing'
+        }
+      } else {
+        switch (type) {
+          case 'send':
+            return 'Sent'
+          case 'receive':
+            return 'Received'
+          case 'mining':
+            return 'Mining Reward'
+          default:
+            return 'Activity'
+        }
       }
     }
 
@@ -423,7 +436,7 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
                       <div className="flex-1 min-w-0">
                       {/* Line 1: Title + MochiScan Button */}
                       <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium text-sm">{getTitle(tx.type)}</p>
+                        <p className="font-medium text-sm">{getTitle(tx.type, tx.pending)}</p>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -501,7 +514,7 @@ export const TransactionList = forwardRef<TransactionListRef, TransactionListPro
                 <div className="flex flex-col h-full min-h-0">
                   {/* Header */}
                   <div className="flex items-center justify-between p-4 border-b">
-                    <h2 className="text-lg font-semibold">{getTitle(tx.type)}</h2>
+                    <h2 className="text-lg font-semibold">{getTitle(tx.type, tx.pending)}</h2>
                     <Button
                       variant="ghost"
                       size="sm"

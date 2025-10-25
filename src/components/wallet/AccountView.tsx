@@ -3,17 +3,17 @@ import { Drawer, DrawerContent } from '@/components/ui/drawer'
 import { LiquidButton } from '@/components/ui/shadcn-io/liquid-button'
 import { motion } from 'framer-motion'
 import {
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  Coins,
-  Copy,
-  QrCode,
-  RefreshCcw,
-  RefreshCw,
-  Send,
-  Tag as TagIcon,
-  Wallet
+    AlertTriangle,
+    CheckCircle,
+    Clock,
+    Coins,
+    Copy,
+    QrCode,
+    RefreshCcw,
+    RefreshCw,
+    Send,
+    Tag as TagIcon,
+    Wallet
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
@@ -21,9 +21,9 @@ import { Account, MasterSeed, NetworkProvider, useAccountActivity, useAccounts, 
 
 import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { log } from "@/lib/utils/logging"
@@ -167,24 +167,22 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
 
   // Transaction polling - triggered by block height changes
   useEffect(() => {
-    // Only refresh if there are pending transactions or on initial mount
-    if (pendingTransactions.length > 0 || network.blockHeight === 0) {
-      logger.info(`Block height changed to ${network.blockHeight}, refreshing transactions for account ${account.tag}`)
-      
-      const refreshTransactions = async () => {
-        try {
-          setTransactionPolling(true)
-          await safeRefresh()
-        } catch (error) {
-          console.error('Failed to refresh transactions on block update:', error)
-        } finally {
-          setTransactionPolling(false)
-        }
+    // Always refresh on block height changes to catch transactions from other browsers
+    logger.info(`Block height changed to ${network.blockHeight}, refreshing transactions for account ${account.tag}`)
+    
+    const refreshTransactions = async () => {
+      try {
+        setTransactionPolling(true)
+        await safeRefresh()
+      } catch (error) {
+        console.error('Failed to refresh transactions on block update:', error)
+      } finally {
+        setTransactionPolling(false)
       }
-
-      refreshTransactions()
     }
-  }, [network.blockHeight, account.tag, pendingTransactions.length, safeRefresh])
+
+    refreshTransactions()
+  }, [network.blockHeight, account.tag, safeRefresh])
 
   const tag = useMemo(() => {
     return TagUtils.addrTagToBase58(Buffer.from(account.tag, 'hex'))
