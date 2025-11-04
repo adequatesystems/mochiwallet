@@ -1,32 +1,37 @@
 import { Button } from '@/components/ui/button'
-import { AnimatePresence, motion } from 'framer-motion'
+import { Drawer, DrawerContent } from '@/components/ui/drawer'
+import { LiquidButton } from '@/components/ui/shadcn-io/liquid-button'
+import { motion } from 'framer-motion'
 import {
-  CheckCircle,
-  Clock,
-  Coins,
-  Copy,
-  QrCode,
-  RefreshCcw,
-  Send,
-  Tag as TagIcon,
-  Wallet,
-  AlertTriangle
+    AlertTriangle,
+    CheckCircle,
+    Clock,
+    Coins,
+    Copy,
+    QrCode,
+    RefreshCcw,
+    RefreshCw,
+    Send,
+    Tag as TagIcon,
+    Wallet
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { Account, MasterSeed, NetworkProvider, useAccounts, useNetwork, useWallet } from 'mochimo-wallet'
+import { Account, MasterSeed, NetworkProvider, useAccountActivity, useAccounts, useNetwork, useWallet } from 'mochimo-wallet'
 
+import { Skeleton } from '@/components/ui/skeleton'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { SendModal } from './SendModal'
-import {TagUtils} from "mochimo-wots"
-import { ReceiveDialog } from './ReceiveDialog'
-import { ManageAccountsDialog } from './ManageAccountsDialog'
 import { log } from "@/lib/utils/logging"
+import { TagUtils } from "mochimo-wots"
+import { ManageAccountsDialog } from './ManageAccountsDialog'
+import { ReceiveDialog } from './ReceiveDialog'
+import { SendModal } from './SendModal'
+import { TransactionList, TransactionListRef } from './TransactionList'
 const logger = log.getLogger("wallet");
 
 interface AccountViewProps {
@@ -34,19 +39,10 @@ interface AccountViewProps {
   onUpdate: (updated: Account) => void
 }
 
-// Temporary transaction type (we'll expand this later)
-interface Transaction {
-  type: 'send' | 'receive'
-  amount: string
-  timestamp: number
-  address: string
-}
-
-
-
 export function AccountView({ account, onUpdate }: AccountViewProps) {
   const [showAdvanced, setShowAdvanced] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
+  const [balanceRefreshing, setBalanceRefreshing] = useState(false)
+  const [transactionPolling, setTransactionPolling] = useState(false)
   const [isActivated, setIsActivated] = useState<boolean | null>(null)
   const [checkingActivation, setCheckingActivation] = useState(false)
   const [activating, setActivating] = useState(false)
@@ -55,25 +51,34 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
   const [copied, setCopied] = useState(false)
   const [receiveModalOpen, setReceiveModalOpen] = useState(false)
   const [showDetails, setShowDetails] = useState(false)
+  const [showAllTransactions, setShowAllTransactions] = useState(false)
+  
+  const transactionListRef = useRef<TransactionListRef>(null)
+  const isRefreshingRef = useRef(false)
 
   const w = useWallet()
   const ac = useAccounts()
   const net = useNetwork()
-  // Temporary transactions (we'll implement real data later)
-  const tempTransactions: Transaction[] = [
-    {
-      type: 'receive',
-      amount: '100.00000000',
-      timestamp: Date.now() - 3600000,
-      address: '1234...5678'
-    },
-    {
-      type: 'send',
-      amount: '50.00000000',
-      timestamp: Date.now() - 7200000,
-      address: '8765...4321'
+  
+  // Get account activity data for polling
+  const { pendingTransactions } = useAccountActivity(account)
+
+  // Safe refresh function that prevents conflicts
+  const safeRefresh = useCallback(async () => {
+    if (!transactionListRef.current || isRefreshingRef.current) {
+      console.log('Refresh skipped - already in progress or no ref')
+      return
     }
-  ]
+
+    try {
+      isRefreshingRef.current = true
+      await transactionListRef.current.refresh()
+    } catch (error) {
+      console.error('Failed to refresh transactions:', error)
+    } finally {
+      isRefreshingRef.current = false
+    }
+  }, [])
 
 
   // Check activation status on mount and refresh
@@ -143,10 +148,10 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
 
   // Handle refresh
   const handleRefresh = async () => {
-    if(refreshing) return;
-    setRefreshing(true)
+    if (balanceRefreshing) return;
+    setBalanceRefreshing(true)
     checkActivation().finally(() => {
-      setRefreshing(false)
+      setBalanceRefreshing(false)
     })
   }
   const network = useNetwork()
@@ -154,11 +159,30 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
 
   useEffect(() => {
     //when block height changes, check if the account needs to update its wots index.
-    setRefreshing(true)
+    setBalanceRefreshing(true)
     checkActivation().finally(() => {
-      setRefreshing(false)
+      setBalanceRefreshing(false)
     })
   }, [network.blockHeight, account.tag])
+
+  // Transaction polling - triggered by block height changes
+  useEffect(() => {
+    // Always refresh on block height changes to catch transactions from other browsers
+    logger.info(`Block height changed to ${network.blockHeight}, refreshing transactions for account ${account.tag}`)
+    
+    const refreshTransactions = async () => {
+      try {
+        setTransactionPolling(true)
+        await safeRefresh()
+      } catch (error) {
+        console.error('Failed to refresh transactions on block update:', error)
+      } finally {
+        setTransactionPolling(false)
+      }
+    }
+
+    refreshTransactions()
+  }, [network.blockHeight, account.tag, safeRefresh])
 
   const tag = useMemo(() => {
     return TagUtils.addrTagToBase58(Buffer.from(account.tag, 'hex'))
@@ -221,16 +245,16 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
                     size="icon"
                     onClick={handleRefresh}
                     className="h-9 w-9"
-                    disabled={refreshing}
+                    disabled={balanceRefreshing}
                   >
                     <RefreshCcw className={cn(
                       "h-4 w-4",
-                      refreshing && "animate-spin"
+                      balanceRefreshing && "animate-spin"
                     )} />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {refreshing ? 'Refreshing...' : 'Refresh Account'}
+                  {balanceRefreshing ? 'Refreshing...' : 'Refresh Account'}
                 </TooltipContent>
               </Tooltip>
             </div>
@@ -329,14 +353,21 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
                   className="flex flex-col"
                 >
                   <div className="flex items-baseline gap-2">
-                    <div className="font-mono">
-                      <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-                        {formatBalance(account.balance||'0')}
-                      </span>
-                      <span className="ml-2 text-xl text-muted-foreground font-medium">
-                        MCM
-                      </span>
-                    </div>
+                    {net.isConnected ? (
+                      <div className="font-mono">
+                        <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+                          {formatBalance(account.balance||'0')}
+                        </span>
+                        <span className="ml-2 text-xl text-muted-foreground font-medium">
+                          MCM
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-7 w-40" />
+                        <Skeleton className="h-5 w-10" />
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               </div>
@@ -344,7 +375,7 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
           </motion.div>
 
           {/* Action Buttons */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <Tooltip>
               <TooltipTrigger asChild>
                 <motion.div
@@ -352,33 +383,15 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2 }}
                 >
-                  <Button
-                    size="lg"
+                  <LiquidButton
+                    variant="outline"
+                    size="default"
+                    className="w-full h-16 rounded-lg"
                     onClick={() => setSendModalOpen(true)}
-                    // disabled={!isActivated}
-                    className={cn(
-                      "w-full h-24 relative overflow-hidden group",
-                      isActivated
-                        ? "bg-primary/10 hover:bg-primary/20 text-primary border-2 border-primary/20"
-                        : "bg-muted border-2 border-muted"
-                    )}
                   >
-                    <motion.div
-                      className="flex flex-col items-center gap-2 relative z-10"
-                      whileHover={{ y: -5 }}
-                    >
-                      <Send className={cn(
-                        "h-6 w-6",
-                        isActivated ? "text-primary" : "text-muted-foreground"
-                      )} />
-                      <span className="font-semibold">Send</span>
-                    </motion.div>
-                    <motion.div
-                      className="absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                      initial={false}
-                      whileHover={{ scale: 1.5, rotate: 45 }}
-                    />
-                  </Button>
+                    <Send className="h-5 w-5" />
+                    <span className="font-medium text-sm">Send</span>
+                  </LiquidButton>
                 </motion.div>
               </TooltipTrigger>
               <TooltipContent>
@@ -396,25 +409,15 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <Button
-                    size="lg"
+                  <LiquidButton
                     variant="outline"
-                    className="w-full h-24 relative overflow-hidden group"
+                    size="default"
+                    className="w-full h-16 rounded-lg"
                     onClick={() => setReceiveModalOpen(true)}
                   >
-                    <motion.div
-                      className="flex flex-col items-center gap-2 relative z-10"
-                      whileHover={{ y: -5 }}
-                    >
-                      <QrCode className="h-6 w-6" />
-                      <span className="font-semibold">Receive</span>
-                    </motion.div>
-                    <motion.div
-                      className="absolute inset-0 bg-muted/50 opacity-0 group-hover:opacity-100 transition-opacity"
-                      initial={false}
-                      whileHover={{ scale: 1.5, rotate: 45 }}
-                    />
-                  </Button>
+                    <QrCode className="h-5 w-5" />
+                    <span className="font-medium text-sm">Receive</span>
+                  </LiquidButton>
                 </motion.div>
               </TooltipTrigger>
               <TooltipContent>
@@ -430,20 +433,31 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
             transition={{ delay: 0.4 }}
             className="bg-card rounded-xl border-2 border-border/50"
           >
-            <div className="p-4 border-b border-border/50 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" />
                 <h3 className="font-semibold text-foreground">Recent Activity</h3>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-xs hover:text-primary hover:bg-primary/10"
-              >
-                View All
-              </Button>
+              <div className="flex items-center gap-2">
+                {/* Syncing indicator */}
+                {transactionPolling && (
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAllTransactions(true)}
+                  className="h-8 px-3 text-xs"
+                >
+                  Show All
+                </Button>
+              </div>
             </div>
-            {/* Transaction list will go here */}
+            <div className="px-2 py-2">
+              <TransactionList ref={transactionListRef} account={account} />
+            </div>
           </motion.div>
         </div>
       </div>
@@ -451,6 +465,10 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
       <SendModal
         isOpen={sendModalOpen}
         onClose={() => setSendModalOpen(false)}
+        onTransactionSent={() => {
+          // Refresh the transaction list when a transaction is sent
+          safeRefresh()
+        }}
       />
 
       <ReceiveDialog
@@ -466,6 +484,23 @@ export function AccountView({ account, onUpdate }: AccountViewProps) {
         initialAccount={account}
         showBack={false}
       />
+
+      {/* Full Transaction View Drawer */}
+      <Drawer open={showAllTransactions} onOpenChange={setShowAllTransactions}>
+        <DrawerContent className="p-0 h-[100dvh] flex flex-col overflow-hidden rounded-none">
+          <div className="flex items-center justify-between p-4 border-b pr-12">
+            <h2 className="text-xl font-semibold">All Transactions</h2>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4 min-h-0">
+            <TransactionList 
+              ref={transactionListRef} 
+              account={account} 
+              showAll={true}
+            />
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   )
 } 

@@ -1,11 +1,11 @@
-import { ReactNode } from 'react'
-import { Menu, Maximize2, Minimize2, PanelRight, PanelRightClose } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Logo } from '@/components/ui/logo'
-import { ThemeToggle } from '@/components/theme-toggle'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useViewMode } from '@/lib/contexts/ViewModeContext'
 import { cn } from '@/lib/utils'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Menu, PanelRight, PanelRightClose } from 'lucide-react'
+import { checkServiceHealth, useActiveProvider, useNetwork } from 'mochimo-wallet'
+import { ReactNode, useEffect, useMemo, useState } from 'react'
 
 interface WalletLayoutProps {
   children: ReactNode
@@ -21,6 +21,36 @@ export function WalletLayout({
   sidebarOpen = false
 }: WalletLayoutProps) {
   const { viewMode, toggleViewMode, isExtension } = useViewMode()
+  const { isConnected } = useNetwork()
+  const mesh = useActiveProvider('mesh')
+  const proxy = useActiveProvider('proxy')
+  const active = mesh || proxy
+  const providerKey = active?.id ?? ''
+  const serverName = useMemo(() => {
+    try {
+      return active ? new URL(active.apiUrl).host : ''
+    } catch {
+      return active?.apiUrl ?? ''
+    }
+  }, [active])
+  const [latencyMs, setLatencyMs] = useState<number | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      if (!active) { setLatencyMs(null); return }
+      try {
+        const res = await checkServiceHealth(active, 2500)
+        if (!cancelled) setLatencyMs(res.ok ? (res.latencyMs ?? null) : null)
+      } catch {
+        if (!cancelled) setLatencyMs(null)
+      }
+    }
+    void run()
+    // re-check periodically
+    const t = setInterval(run, 15000)
+    return () => { cancelled = true; clearInterval(t) }
+  }, [providerKey])
   
   return (
     <div className={cn(
@@ -58,6 +88,26 @@ export function WalletLayout({
           </div>
         </div>
         <div className="flex items-center ">
+          {/* Network status indicator */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="mr-2 flex items-center">
+                <span
+                  className={cn(
+                    "inline-block h-3 w-3 rounded-full animate-pulse",
+                    isConnected ? "bg-green-500 shadow-[0_0_0_4px_rgba(34,197,94,0.25)]" : "bg-red-500 shadow-[0_0_0_4px_rgba(239,68,68,0.25)]"
+                  )}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>
+                {isConnected ? 'Online' : 'Offline'}
+                {serverName ? ` • ${serverName}` : ''}
+                {isConnected && latencyMs !== null ? ` • ${latencyMs}ms` : ''}
+              </p>
+            </TooltipContent>
+          </Tooltip>
           {isExtension && (
             <Tooltip>
               <TooltipTrigger asChild>

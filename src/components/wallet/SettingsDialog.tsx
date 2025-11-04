@@ -1,21 +1,4 @@
-import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import {
-  LogOut,
-  AlertTriangle,
-  Moon,
-  Sun,
-  Monitor,
-  ArrowLeft,
-  Download,
-  Lock,
-  Eye,
-  EyeOff,
-  Key
-} from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
-import { StorageProvider, useWallet } from 'mochimo-wallet'
-import { motion } from 'framer-motion'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,10 +9,32 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { version } from '../../../package.json'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { sessionManager } from '@/lib/services/SessionManager'
 import { log } from "@/lib/utils/logging"
-import { Input } from '@/components/ui/input'
+import { motion } from 'framer-motion'
+import {
+  ArrowLeft,
+  CircleCheckBig,
+  CircleX,
+  Download,
+  Key,
+  Loader2,
+  Lock,
+  LogOut,
+  Monitor,
+  Moon,
+  RotateCw,
+  Sun,
+  Trash2
+} from 'lucide-react'
+import { addCustomProvider, applyActiveNetworkInstance, checkServiceHealth, removeProvider, setActiveProvider, StorageProvider, useActiveProvider, useProviderBucket, useWallet } from 'mochimo-wallet'
+import { useEffect, useState } from 'react'
+import { useDispatch } from 'react-redux'
+import { version } from '../../../package.json'
 const logger = log.getLogger("wallet-settings");
 
 type Theme = 'dark' | 'light' | 'system'
@@ -55,6 +60,48 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
   const [recoveryError, setRecoveryError] = useState<string | null>(null)
   const [showRecoveryPhrase, setShowRecoveryPhrase] = useState(false)
   const [recoveryPhrase, setRecoveryPhrase] = useState('')
+
+  // Network providers (Mesh)
+  const dispatch = useDispatch()
+  const meshBucket = useProviderBucket('mesh')
+  const activeMesh = useActiveProvider('mesh')
+  const [customApiUrl, setCustomApiUrl] = useState('')
+  const [customName, setCustomName] = useState('Custom Mesh API')
+  const [health, setHealth] = useState<Record<string, { status: 'loading' | 'ok' | 'error', latencyMs?: number }>>({})
+
+  const runHealthCheck = async (id: string, apiUrl: string, name: string, isCustom?: boolean) => {
+    setHealth(prev => ({ ...prev, [id]: { status: 'loading' } }))
+    try {
+      const res = await checkServiceHealth({ id, name, kind: 'mesh', apiUrl, isCustom: !!isCustom }, 4000)
+      setHealth(prev => ({ ...prev, [id]: { status: res.ok ? 'ok' : 'error', latencyMs: res.latencyMs } }))
+    } catch {
+      setHealth(prev => ({ ...prev, [id]: { status: 'error' } }))
+    }
+  }
+
+  // Auto-check health when list changes or dialog opens
+  useEffect(() => {
+    if (!isOpen) return
+    meshBucket.items.forEach(item => {
+      void runHealthCheck(item.id, item.apiUrl, item.name, item.isCustom)
+    })
+  }, [isOpen, meshBucket.items])
+
+  const handleSelectMesh = async (id: string) => {
+    dispatch(setActiveProvider({ kind: 'mesh', id }) as any)
+    await (dispatch(applyActiveNetworkInstance() as any) as any)
+  }
+
+  const handleAddCustomMesh = async () => {
+    const url = customApiUrl.trim()
+    if (!url) return
+    dispatch(addCustomProvider({ kind: 'mesh', name: customName || 'Custom Mesh API', apiUrl: url }) as any)
+    setCustomApiUrl('')
+  }
+
+  const handleRemoveMesh = (id: string) => {
+    dispatch(removeProvider({ kind: 'mesh', id }) as any)
+  }
 
   const handleLogout = async () => {
     try {
@@ -147,6 +194,125 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
 
         {/* Content */}
         <div className="container max-w-2xl mx-auto p-6 space-y-8">
+          {/* Network Settings */}
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold">Network</h2>
+            <p className="text-sm text-muted-foreground">Select your Mesh API endpoint or add a custom one</p>
+
+            {/* Active info */}
+            <div className="rounded-lg border border-border/50 bg-card/50 p-3 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Active Mesh</span>
+                <span className="font-medium truncate max-w-[60%]" title={activeMesh?.apiUrl}>{activeMesh?.name || '—'}</span>
+              </div>
+              <div className="text-xs text-muted-foreground truncate" title={activeMesh?.apiUrl}>{activeMesh?.apiUrl || '—'}</div>
+            </div>
+
+            {/* List providers (contained scroll) */}
+            <div className="rounded-md border border-border/50 overflow-hidden">
+              <div className="max-h-60 overflow-y-auto divide-y divide-border/50">
+                {meshBucket.items.map(item => (
+                  <div key={item.id} className="px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        className="flex items-start text-left gap-3 flex-1"
+                        onClick={() => handleSelectMesh(item.id)}
+                      >
+                        <div className={`mt-0.5 h-3 w-3 rounded-full border ${meshBucket.activeId === item.id ? 'bg-primary border-primary' : 'border-border'}`} />
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{item.name}</div>
+                          <div className="mt-1 flex items-center gap-2 min-w-0">
+                            {/* Inline health badge below title, before URL */}
+                            {health[item.id]?.status === 'loading' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge className="h-4 px-1.5 py-0 text-[10px] leading-none bg-muted text-muted-foreground">
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    Checking
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Checking health…</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {health[item.id]?.status === 'ok' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge className="h-4 px-1.5 py-0 text-[10px] leading-none bg-green-500/10 text-green-600 border-green-500/20">
+                                    <CircleCheckBig className="h-3 w-3 mr-1" />
+                                    {(health[item.id]?.latencyMs ?? 0)}ms
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Healthy • {(health[item.id]?.latencyMs ?? 0)}ms</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {health[item.id]?.status === 'error' && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge className="h-4 px-1.5 py-0 text-[10px] leading-none bg-red-500/10 text-red-600 border-red-500/20">
+                                    <CircleX className="h-3 w-3 mr-1" />
+                                    Down
+                                  </Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Unavailable</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                            {!health[item.id] && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Badge className="h-4 px-1.5 py-0 text-[10px] leading-none bg-muted text-muted-foreground">—</Badge>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Unknown</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground truncate" title={item.apiUrl}>{item.apiUrl}</div>
+                        </div>
+                      </button>
+                      <Button title="Check health" variant="ghost" size="icon" className="shrink-0"
+                        onClick={() => runHealthCheck(item.id, item.apiUrl, item.name, item.isCustom)}>
+                        <RotateCw className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="mt-2 flex items-center justify-end gap-1.5">
+                      {item.isCustom && (
+                        <Button title="Remove" variant="ghost" size="icon" onClick={() => handleRemoveMesh(item.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Add custom */}
+            <div className="mt-3 space-y-2">
+              <div className="grid grid-cols-1 gap-2">
+                <Input
+                  placeholder="Custom name (optional)"
+                  value={customName}
+                  onChange={(e) => setCustomName(e.target.value)}
+                />
+                <Input
+                  placeholder="https://your-mesh-api"
+                  value={customApiUrl}
+                  onChange={(e) => setCustomApiUrl(e.target.value)}
+                />
+                <Button onClick={handleAddCustomMesh} disabled={!customApiUrl.trim()}>
+                  Add Endpoint
+                </Button>
+              </div>
+            </div>
+          </div>
+
           {/* Theme Settings */}
           <div className="space-y-3">
             <h2 className="text-lg font-semibold">Appearance</h2>
